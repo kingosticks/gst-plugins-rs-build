@@ -12,7 +12,7 @@ RUN apt-get update \
 
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
-    
+RUN rustup default stable
 RUN cargo install cargo-deb
 
 COPY VERSION /
