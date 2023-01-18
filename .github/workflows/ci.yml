@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: ubuntu-20.04
-    container: ghcr.io/mopidy/gst-plugin-spotify:latest
+    container: ghcr.io/mopidy/gst-plugin-spotify-deb:latest
 
     steps:
       - name: Checkout repo
