@@ -17,4 +17,4 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build deb
-        run: entrypoint.sh
+        run: ./entrypoint.sh
