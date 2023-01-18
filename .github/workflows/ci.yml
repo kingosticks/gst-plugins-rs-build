@@ -1,0 +1,20 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  main:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-20.04
+    container: ghcr.io/mopidy/gst-plugin-spotify:latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build deb
+        run: entrypoint.sh
