@@ -16,6 +16,3 @@ RUN rustup default stable
 RUN cargo install cargo-deb
 
 COPY VERSION /
-COPY entrypoint.sh /
-
-ENTRYPOINT ["/entrypoint.sh"]
