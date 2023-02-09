@@ -20,3 +20,9 @@ jobs:
 
       - name: Build deb
         run: ./entrypoint.sh
+
+      - name: Upload deb
+        uses: actions/upload-artifact@v3
+        with:
+            name: gst-plugin-spotify.deb
+            path: /release/*.deb
