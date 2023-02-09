@@ -8,10 +8,12 @@ jobs:
       fail-fast: false
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugin-spotify-deb:latest
-
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      - name: Copy home stuff to stupid github home
+        run: cp -rT /root $HOME
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
