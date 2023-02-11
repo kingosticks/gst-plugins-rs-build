@@ -1,11 +1,19 @@
 REPO = ghcr.io/mopidy
-IMAGE = gst-plugin-spotify-deb
+IMAGE = gst-plugins-rs-build
 VERSION = $(shell cat VERSION)
 
 .PHONY: build release git-release docker-release
 
-build:
-	docker build -t ${REPO}/${IMAGE}:${VERSION} .
+build: docker-build build-armhf build-x86_64
+
+build-armhf:
+	docker run -v $(pwd)/../gst-plugins-rs:/gst-plugins-rs:z -v $(pwd):/gst-plugins-rs-build:z ${REPO}/${IMAGE}:${VERSION} /bin/bash /gst-plugins-rs-build/entrypoint.sh armhf
+	
+build-x86_64:
+	docker build -tag ${REPO}/cross-rs-gst:x86_64 --file docker/x86_64/Dockerfile .
+
+docker-build:
+	docker build --tag ${REPO}/${IMAGE} --file Dockerfile .
 
 release: git-release docker-release
 
