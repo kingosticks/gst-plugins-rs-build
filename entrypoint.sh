@@ -1,7 +1,6 @@
 #!/bin/sh
 
 arch="${1}"
-shift
 
 case $arch in
     armhf)
