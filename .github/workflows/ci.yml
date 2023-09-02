@@ -9,6 +9,19 @@ jobs:
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugin-spotify-deb:latest
     steps:
+      - name: add armhf
+        run: sudo dpkg --add-architecture armhf
+
+      - name install deps
+        run: >
+             sudo apt-get update &&
+             DEBIAN_FRONTEND=noninteractive
+             apt-get install --no-install-recommends
+             clang curl ca-certificates debhelper git pkg-config
+             gcc-arm-linux-gnueabihf
+             libgstreamer-plugins-base1.0-dev:armhf &&
+             rm -rf /var/lib/apt/lists/*
+
       - name: Checkout repo
         uses: actions/checkout@v3
 
