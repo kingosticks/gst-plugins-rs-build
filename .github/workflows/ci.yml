@@ -19,7 +19,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build deb
-        run: ./entrypoint.sh
+        run: ./entrypoint.sh armhf
 
       - name: Upload deb
         uses: actions/upload-artifact@v3
