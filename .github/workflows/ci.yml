@@ -12,7 +12,7 @@ jobs:
       - name: add armhf
         run: sudo dpkg --add-architecture armhf
 
-      - name install deps
+      - name: install deps
         run: >
              sudo apt-get update &&
              DEBIAN_FRONTEND=noninteractive
