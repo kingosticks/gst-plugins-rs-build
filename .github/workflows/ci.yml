@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugin-spotify-deb:latest
     steps:
+      - name: Install sudo package
+        run: apt update && apt install sudo
+
       - name: add armhf
         run: sudo dpkg --add-architecture armhf
 
