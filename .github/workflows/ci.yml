@@ -7,38 +7,65 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: ubuntu-20.04
-    container: ghcr.io/mopidy/gst-plugin-spotify-deb:latest
+    container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
+    env:
+      GST_PLUGIN: gst-plugin-spotify
+      RUST_TARGET: arm-unknown-linux-gnueabihf
+      LINKER_TARGET: arm-linux-gnueabihf
     steps:
-      - name: Install sudo package
-        run: apt update && apt install sudo
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - name: add armhf
-        run: sudo dpkg --add-architecture armhf
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: stable
+        targets: ${{ env.RUST_TARGET }}
 
-      - name: install deps
-        run: >
-             sudo apt-get update &&
-             DEBIAN_FRONTEND=noninteractive
-             apt-get install --no-install-recommends
-             clang curl ca-certificates debhelper git pkg-config
-             gcc-arm-linux-gnueabihf
-             libgstreamer-plugins-base1.0-dev:armhf &&
-             rm -rf /var/lib/apt/lists/*
+    - name: Install cargo deb
+      run: cargo install cargo-deb
 
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Copy home stuff to stupid github home
-        run: cp -rT /root $HOME
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build deb
-        run: ./entrypoint.sh armhf
-
-      - name: Upload deb
-        uses: actions/upload-artifact@v3
-        with:
-            name: gst-plugin-spotify.deb
-            path: /release/*.deb
+    - name: Checkout gst-plugins-rs
+      run: |
+        GST_GIT_REPO=https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
+        GST_GIT_BRANCH=main
+        git clone --depth 1 -b $GST_GIT_BRANCH $GST_GIT_REPO
+        GST_SRC=$(basename $GST_GIT_REPO .git)
+        cp $GST_SRC/audio/spotify/Cargo.toml Cargo.toml.orig
+        echo "GST_SRC=$GST_SRC"
+        echo "GST_SRC=$GST_SRC" >> $GITHUB_ENV
+   
+    - name: Build gst-plugins-rs
+      run: |
+        export PKG_CONFIG_ALLOW_CROSS=1
+        export PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
+        RPI_STUFF="/rpi-tools/arm-bcm2708/${{ env.LINKER_TARGET }}"
+        RPI_SYSROOT="$RPI_STUFF/${{ env.LINKER_TARGET }}/sysroot"
+        RPI_LINKER="$RPI_STUFF/bin/${{ env.LINKER_TARGET }}-gcc"
+        export RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
+        cd ${{ env.GST_SRC }}
+        cargo build --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
+   
+    - name: Prep deb control
+      run: |
+        export PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
+        GST_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
+        cat Cargo.toml.orig Cargo.toml.deb | sed "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" > ${{ env.GST_SRC }}/audio/spotify/Cargo.toml
+   
+    - name: Build deb
+      run: |
+        cd ${{ env.GST_SRC }}
+        cargo deb --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --no-build
+        DEB_FILE=${{ env.GST_SRC }}/$(find target/${{ env.RUST_TARGET }}/debian/gst-plugin-spotify_*.deb)
+        DEB_NAME=$(basename $DEB_FILE .deb)
+        echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
+        echo "DEB_NAME=$DEB_NAME" >> $GITHUB_ENV
+   
+    - name: Check deb
+      run: dpkg-deb --field ${{ env.DEB_FILE }} Package Architecture Version Installed-Size
+   
+    - name: Upload deb
+      uses: actions/upload-artifact@v3
+      with:
+          name: ${{ env.DEB_NAME }}
+          path: ${{ env.DEB_FILE }}
