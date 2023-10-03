@@ -43,8 +43,7 @@ jobs:
         RPI_SYSROOT="$RPI_STUFF/${{ env.LINKER_TARGET }}/sysroot"
         RPI_LINKER="$RPI_STUFF/bin/${{ env.LINKER_TARGET }}-gcc"
         export RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
-        cd ${{ env.GST_SRC }}
-        cargo build --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
+        cargo build --manifest-path=${{ env.GST_SRC }} --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
    
     - name: Prep deb control
       run: |
@@ -54,8 +53,7 @@ jobs:
    
     - name: Build deb
       run: |
-        cd ${{ env.GST_SRC }}
-        cargo deb --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --no-build
+        cargo deb --manifest-path=${{ env.GST_SRC }} --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --no-build
         DEB_FILE=${{ env.GST_SRC }}/$(find target/${{ env.RUST_TARGET }}/debian/gst-plugin-spotify_*.deb)
         DEB_NAME=$(basename $DEB_FILE .deb)
         echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
