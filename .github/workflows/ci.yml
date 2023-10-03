@@ -22,6 +22,13 @@ jobs:
         toolchain: stable
         targets: ${{ env.RUST_TARGET }}
         
+    - name: Checkout gst-plugins-rs
+      run: |
+        GST_GIT_REPO=https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
+        GST_GIT_BRANCH=main
+        git clone --depth 1 -b $GST_GIT_BRANCH $GST_GIT_REPO
+        cp gst-plugins-rs/audio/spotify/Cargo.toml Cargo.toml.orig
+    
     - name: Cache cargo plugins
       uses: actions/cache@v3
       with:
@@ -30,21 +37,11 @@ jobs:
           ~/.cargo/registry/index/
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
-        key: ${{ runner.os }}-${{ env.RUST_TARGET }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ env.RUST_TARGET }}-cargo-${{ hashFiles('gst-plugins-rs/Cargo.lock') }}
 
     - name: Install cargo deb
       run: cargo install cargo-deb
-
-    - name: Checkout gst-plugins-rs
-      run: |
-        GST_GIT_REPO=https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
-        GST_GIT_BRANCH=main
-        git clone --depth 1 -b $GST_GIT_BRANCH $GST_GIT_REPO
-        GST_SRC=$(basename $GST_GIT_REPO .git)
-        cp gst-plugins-rs/audio/spotify/Cargo.toml Cargo.toml.orig
-        echo "GST_SRC=$GST_SRC"
-        echo "GST_SRC=$GST_SRC" >> $GITHUB_ENV
-   
+ 
     - name: Build gst-plugins-rs
       run: |
         export PKG_CONFIG_ALLOW_CROSS=1
