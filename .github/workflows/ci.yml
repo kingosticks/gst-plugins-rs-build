@@ -31,7 +31,7 @@ jobs:
         GST_GIT_BRANCH=main
         git clone --depth 1 -b $GST_GIT_BRANCH $GST_GIT_REPO
         GST_SRC=$(basename $GST_GIT_REPO .git)
-        cp $GST_SRC/audio/spotify/Cargo.toml Cargo.toml.orig
+        cp gst-plugins-rs/audio/spotify/Cargo.toml Cargo.toml.orig
         echo "GST_SRC=$GST_SRC"
         echo "GST_SRC=$GST_SRC" >> $GITHUB_ENV
    
@@ -39,31 +39,33 @@ jobs:
       run: |
         export PKG_CONFIG_ALLOW_CROSS=1
         export PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
-        RPI_STUFF="/rpi-tools/arm-bcm2708/${{ env.LINKER_TARGET }}"
-        RPI_SYSROOT="$RPI_STUFF/${{ env.LINKER_TARGET }}/sysroot"
-        RPI_LINKER="$RPI_STUFF/bin/${{ env.LINKER_TARGET }}-gcc"
+        RPI_STUFF="/rpi-tools/arm-bcm2708/arm-linux-gnueabihf"
+        RPI_SYSROOT="$RPI_STUFF/arm-linux-gnueabihf/sysroot"
+        RPI_LINKER="$RPI_STUFF/bin/arm-linux-gnueabihf-gcc"
         export RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
-        cargo build --manifest-path=${{ env.GST_SRC }}/Cargo.toml --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
+        cd gst-plugins-rs
+        cargo build --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
    
     - name: Prep deb control
       run: |
         export PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
         GST_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
-        cat Cargo.toml.orig Cargo.toml.deb | sed "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" > ${{ env.GST_SRC }}/audio/spotify/Cargo.toml
+        cat Cargo.toml.orig Cargo.toml.deb | sed "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" > gst-plugins-rs/audio/spotify/Cargo.toml
    
     - name: Build deb
       run: |
-        cargo deb --manifest-path=${{ env.GST_SRC }}/Cargo.toml --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --no-build
-        DEB_FILE=${{ env.GST_SRC }}/$(find target/${{ env.RUST_TARGET }}/debian/gst-plugin-spotify_*.deb)
-        DEB_NAME=$(basename $DEB_FILE .deb)
-        echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
+        cd gst-plugins-rs
+        cargo deb --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --no-build
+        DEB_PATH=$(readlink -m $(find target/${{ env.RUST_TARGET }}/debian/${{ env.GST_PLUGIN }}_*.deb))
+        DEB_NAME=$(basename $DEB_PATH .deb)
+        echo "DEB_PATH=$DEB_PATH" >> $GITHUB_ENV
         echo "DEB_NAME=$DEB_NAME" >> $GITHUB_ENV
    
     - name: Check deb
-      run: dpkg-deb --field ${{ env.DEB_FILE }} Package Architecture Version Installed-Size
+      run: dpkg-deb --field ${{ env.DEB_PATH }} Package Architecture Version Installed-Size
    
     - name: Upload deb
       uses: actions/upload-artifact@v3
       with:
           name: ${{ env.DEB_NAME }}
-          path: ${{ env.DEB_FILE }}
+          path: ${{ env.DEB_PATH }}
