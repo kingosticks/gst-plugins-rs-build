@@ -28,6 +28,7 @@ jobs:
         GST_GIT_BRANCH=main
         git clone --depth 1 -b $GST_GIT_BRANCH $GST_GIT_REPO
         cp gst-plugins-rs/audio/spotify/Cargo.toml Cargo.toml.orig
+        echo ${{ hashFiles('**/Cargo.lock') }}
     
     - name: Cache cargo plugins
       uses: actions/cache@v3
