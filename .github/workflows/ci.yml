@@ -37,7 +37,7 @@ jobs:
           ~/.cargo/registry/index/
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
-        key: ${{ runner.os }}-${{ env.RUST_TARGET }}-cargo-${{ hashFiles('gst-plugins-rs/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ env.RUST_TARGET }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install cargo deb
       run: cargo install cargo-deb
