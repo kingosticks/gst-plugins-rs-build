@@ -57,6 +57,9 @@ jobs:
     - name: Build gst-plugins-rs
       run: |
         env
+        echo "PKG_CONFIG_PATH is $PKG_CONFIG_PATH"
+        echo "PKG_CONFIG_ALLOW_CROSS is $PKG_CONFIG_ALLOW_CROSS"
+        echo "RUSTFLAGS is $RUSTFLAGS"
         cd gst-plugins-rs
         cargo build --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
    
