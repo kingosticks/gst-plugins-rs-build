@@ -12,10 +12,12 @@ jobs:
       fail-fast: false
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
+    matrix:
+        include:
+        - rust_target: arm-unknown-linux-gnueabihf
+          linker_target: arm-linux-gnueabihf
     env:
       GST_PLUGIN: gst-plugin-spotify
-      RUST_TARGET: arm-unknown-linux-gnueabihf
-      LINKER_TARGET: arm-linux-gnueabihf
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
@@ -24,7 +26,7 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: stable
-        targets: ${{ env.RUST_TARGET }}
+        targets: ${{ matrix.rust_target }}
         
     - name: Checkout gst-plugins-rs
       run: |
@@ -38,28 +40,33 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.cargo
-        key: ${{ runner.os }}-${{ env.RUST_TARGET }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install cargo deb
       run: cargo install cargo-deb
  
-    - name: Configure environment variables
+    - name: Configure cross environment
+      if: matrix.linker_target != ''
       run: |
         PKG_CONFIG_ALLOW_CROSS=1
-        PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
+        PKG_CONFIG_PATH="/usr/lib/${{ matrix.linker_target }}/pkgconfig"
         echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
-        if [[ '${{ env.LINKER_TARGET }}' == 'arm-linux-gnueabihf' ]]; then
-          RPI_DIR="/rpi-tools/arm-bcm2708/arm-linux-gnueabihf"
-          RPI_SYSROOT="$RPI_DIR/arm-linux-gnueabihf/sysroot"
-          RPI_LINKER="$RPI_DIR/bin/arm-linux-gnueabihf-gcc"
-          RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
-        fi
+
+    - name: Configure cross environment (RPi)
+      if: matrix.linker_target == 'arm-linux-gnueabihf'
+      run: |
+        RPI_DIR="/rpi-tools/arm-bcm2708/arm-linux-gnueabihf"
+        RPI_SYSROOT="$RPI_DIR/arm-linux-gnueabihf/sysroot"
+        RPI_LINKER="$RPI_DIR/bin/arm-linux-gnueabihf-gcc"
+        RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
+        echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
     
     - name: Build gst-plugins-rs
       run: |
+        env
         cd gst-plugins-rs
-        cargo build --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
+        cargo build --target=${{ matrix.rust_target }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
    
     - name: Fixup target-specific install path
       run: |
@@ -69,8 +76,8 @@ jobs:
     - name: Build deb
       run: |
         cd gst-plugins-rs
-        cargo deb --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --no-build
-        DEB_PATH=$(readlink -m $(find target/${{ env.RUST_TARGET }}/debian/${{ env.GST_PLUGIN }}_*.deb))
+        cargo deb --target=${{ matrix.rust_target }} --package ${{ env.GST_PLUGIN }} --no-build
+        DEB_PATH=$(readlink -m $(find target/${{ matrix.rust_target }}/debian/${{ env.GST_PLUGIN }}_*.deb))
         DEB_NAME=$(basename $DEB_PATH .deb)
         echo "DEB_PATH=$DEB_PATH" >> $GITHUB_ENV
         echo "DEB_NAME=$DEB_NAME" >> $GITHUB_ENV
