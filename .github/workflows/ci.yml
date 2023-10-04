@@ -2,6 +2,10 @@ name: CI
 
 on: [push, pull_request]
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   main:
     strategy:
@@ -44,28 +48,21 @@ jobs:
         PKG_CONFIG_ALLOW_CROSS=1
         PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
         echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
         if [[ '${{ env.LINKER_TARGET }}' == 'arm-linux-gnueabihf' ]]; then
-          RPI_STUFF="/rpi-tools/arm-bcm2708/arm-linux-gnueabihf"
-          RPI_SYSROOT="$RPI_STUFF/arm-linux-gnueabihf/sysroot"
-          RPI_LINKER="$RPI_STUFF/bin/arm-linux-gnueabihf-gcc"
+          RPI_DIR="/rpi-tools/arm-bcm2708/arm-linux-gnueabihf"
+          RPI_SYSROOT="$RPI_DIR/arm-linux-gnueabihf/sysroot"
+          RPI_LINKER="$RPI_DIR/bin/arm-linux-gnueabihf-gcc"
           RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
-          echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
-          echo "I am PI"
         fi
     
     - name: Build gst-plugins-rs
       run: |
-        env
-        echo "PKG_CONFIG_PATH is $PKG_CONFIG_PATH"
-        echo "PKG_CONFIG_ALLOW_CROSS is $PKG_CONFIG_ALLOW_CROSS"
-        echo "RUSTFLAGS is $RUSTFLAGS"
         cd gst-plugins-rs
         cargo build --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
    
-    - name: Prep deb control
+    - name: Fixup target-specific install path
       run: |
-        export PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
         GST_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
         cat Cargo.toml.orig Cargo.toml.deb | sed "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" > gst-plugins-rs/audio/spotify/Cargo.toml
    
