@@ -10,14 +10,18 @@ jobs:
   main:
     strategy:
       fail-fast: false
-    runs-on: ubuntu-20.04
-    container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
-    matrix:
+      matrix:
         include:
         - rust_target: arm-unknown-linux-gnueabihf
           linker_target: arm-linux-gnueabihf
+          rust_flags: -C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
+    runs-on: ubuntu-20.04
+    container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
     env:
       GST_PLUGIN: gst-plugin-spotify
+      RPI_DIR: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf
+      RPI_SYSROOT: ${{ env.RPI_DIR }}/arm-linux-gnueabihf/sysroot
+      RPI_LINKER: ${{ env.RPI_DIR }}/bin/arm-linux-gnueabihf-gcc
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
@@ -61,6 +65,7 @@ jobs:
         RPI_LINKER="$RPI_DIR/bin/arm-linux-gnueabihf-gcc"
         RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
         echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
+        echo "RUSTFLAGS is ${{ matrix.rust_flags }}"
     
     - name: Build gst-plugins-rs
       run: |
