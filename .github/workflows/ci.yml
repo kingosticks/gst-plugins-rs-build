@@ -30,14 +30,10 @@ jobs:
         cp gst-plugins-rs/audio/spotify/Cargo.toml Cargo.toml.orig
         echo ${{ hashFiles('**/Cargo.lock') }}
     
-    - name: Cache cargo plugins
+    - name: Cache cargo stuff
       uses: actions/cache@v3
       with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
+        path: ~/.cargo
         key: ${{ runner.os }}-${{ env.RUST_TARGET }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install cargo deb
