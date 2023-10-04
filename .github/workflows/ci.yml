@@ -57,7 +57,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.cargo
-        key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ ${{ needs.bust-cache.outputs.srchash }} }}
+        key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ needs.bust-cache.outputs.srchash }}
 
     - name: Install cargo deb
       run: cargo install cargo-deb
