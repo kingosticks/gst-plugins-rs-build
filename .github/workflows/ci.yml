@@ -51,10 +51,12 @@ jobs:
           RPI_LINKER="$RPI_STUFF/bin/arm-linux-gnueabihf-gcc"
           RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
           echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
+          echo "I am PI"
         fi
     
     - name: Build gst-plugins-rs
       run: |
+        env
         cd gst-plugins-rs
         cargo build --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
    
