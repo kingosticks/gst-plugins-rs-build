@@ -39,14 +39,22 @@ jobs:
     - name: Install cargo deb
       run: cargo install cargo-deb
  
+    - name: Configure environment variables
+      run: |
+        PKG_CONFIG_ALLOW_CROSS=1
+        PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
+        echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH="PKG_CONFIG_PATH" >> $GITHUB_ENV
+        if [[ '${{ env.LINKER_TARGET }}' == 'arm-linux-gnueabihf' ]]; then
+          RPI_STUFF="/rpi-tools/arm-bcm2708/arm-linux-gnueabihf"
+          RPI_SYSROOT="$RPI_STUFF/arm-linux-gnueabihf/sysroot"
+          RPI_LINKER="$RPI_STUFF/bin/arm-linux-gnueabihf-gcc"
+          RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
+          echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
+        fi
+    
     - name: Build gst-plugins-rs
       run: |
-        export PKG_CONFIG_ALLOW_CROSS=1
-        export PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
-        RPI_STUFF="/rpi-tools/arm-bcm2708/arm-linux-gnueabihf"
-        RPI_SYSROOT="$RPI_STUFF/arm-linux-gnueabihf/sysroot"
-        RPI_LINKER="$RPI_STUFF/bin/arm-linux-gnueabihf-gcc"
-        export RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
         cd gst-plugins-rs
         cargo build --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
    
