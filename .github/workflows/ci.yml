@@ -44,7 +44,7 @@ jobs:
         PKG_CONFIG_ALLOW_CROSS=1
         PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
         echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH="PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=PKG_CONFIG_PATH" >> $GITHUB_ENV
         if [[ '${{ env.LINKER_TARGET }}' == 'arm-linux-gnueabihf' ]]; then
           RPI_STUFF="/rpi-tools/arm-bcm2708/arm-linux-gnueabihf"
           RPI_SYSROOT="$RPI_STUFF/arm-linux-gnueabihf/sysroot"
