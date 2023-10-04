@@ -19,9 +19,6 @@ jobs:
     container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
     env:
       GST_PLUGIN: gst-plugin-spotify
-      RPI_DIR: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf
-      RPI_SYSROOT: ${{ env.RPI_DIR }}/arm-linux-gnueabihf/sysroot
-      RPI_LINKER: ${{ env.RPI_DIR }}/bin/arm-linux-gnueabihf-gcc
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
