@@ -6,7 +6,25 @@ defaults:
   run:
     shell: bash
 
+env:
+  GST_GIT_REPO: https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
+  GST_GIT_BRANCH: main
+
 jobs:
+  # This job must run on the runner because hashFiles() operates on the runner
+  # by design, not inside the defined container (actions/runner#837).
+  bust-cache:
+    runs-on: ubuntu-latest
+    outputs:
+      srchash: ${{ steps.gstsrc.outputs.hash }}
+    steps:
+    - name: Checkout gst-plugins-rs
+      run: git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
+
+    - name: Hash cargo lockfile
+      id: gstsrc
+      run: echo "hash=${{ hashFiles('**/Cargo.lock') }}" >> $GITHUB_OUTPUT
+
   main:
     strategy:
       fail-fast: false
@@ -17,6 +35,7 @@ jobs:
           rust_flags: -C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
+    needs: bust-cache
     env:
       GST_PLUGIN: gst-plugin-spotify
     steps:
@@ -31,17 +50,14 @@ jobs:
         
     - name: Checkout gst-plugins-rs
       run: |
-        GST_GIT_REPO=https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
-        GST_GIT_BRANCH=main
-        git clone --depth 1 -b $GST_GIT_BRANCH $GST_GIT_REPO
+        git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
         cp gst-plugins-rs/audio/spotify/Cargo.toml Cargo.toml.orig
-        echo ${{ hashFiles('**/Cargo.lock') }}
     
     - name: Cache cargo stuff
       uses: actions/cache@v3
       with:
         path: ~/.cargo
-        key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ ${{ needs.bust-cache.outputs.srchash }} }}
 
     - name: Install cargo deb
       run: cargo install cargo-deb
