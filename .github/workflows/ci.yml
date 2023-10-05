@@ -98,7 +98,7 @@ jobs:
     - name: Build deb
       run: |
         cd gst-plugins-rs
-        cargo deb --target=${{ matrix.rust_target }} --package ${{ env.GST_PLUGIN }} --no-build
+        cargo deb -v --target=${{ matrix.rust_target }} --package ${{ env.GST_PLUGIN }} --no-build
         DEB_PATH=$(readlink -m $(find target/${{ matrix.rust_target }}/debian/${{ env.GST_PLUGIN }}_*.deb))
         DEB_NAME=$(basename $DEB_PATH .deb)
         echo "DEB_PATH=$DEB_PATH" >> $GITHUB_ENV
