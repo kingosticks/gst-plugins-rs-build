@@ -23,7 +23,10 @@ jobs:
 
     - name: Hash cargo lockfile
       id: gstsrc
-      run: echo "hash=${{ hashFiles('**/Cargo.lock') }}" >> $GITHUB_OUTPUT
+      run: |
+        ls -l **/Cargo.lock
+        echo "hash=${{ hashFiles('**/Cargo.lock') }}"
+        echo "hash=${{ hashFiles('**/Cargo.lock') }}" >> $GITHUB_OUTPUT
 
   main:
     strategy:
