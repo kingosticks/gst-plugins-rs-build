@@ -59,7 +59,7 @@ jobs:
       with:
         path: |
           ~/.cargo
-          gst-plugins-rs/target
+          gst-plugins-rs/target/${{ matrix.rust_target }}
         key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ needs.bust-cache.outputs.srchash }}
         restore-keys: |
           ${{ runner.os }}-${{ matrix.rust_target }}-cargo-
