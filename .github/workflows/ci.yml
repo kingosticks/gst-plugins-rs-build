@@ -24,11 +24,8 @@ jobs:
     - name: Hash cargo lockfile
       id: gstsrc
       run: |
-        pwd
-        ls
-        ls gst-plugins-rs
-        echo "hash=${{ hashFiles('**/Cargo.lock') }}"
-        echo "hash=${{ hashFiles('**/Cargo.lock') }}" >> $GITHUB_OUTPUT
+        echo "hash=${{ hashFiles('gst-plugins-rs') }}"
+        echo "hash=${{ hashFiles('gst-plugins-rs') }}" >> $GITHUB_OUTPUT
 
   main:
     strategy:
@@ -63,6 +60,8 @@ jobs:
       with:
         path: ~/.cargo
         key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ needs.bust-cache.outputs.srchash }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.rust_target }}-cargo-
 
     - name: Install cargo deb
       run: cargo install cargo-deb
