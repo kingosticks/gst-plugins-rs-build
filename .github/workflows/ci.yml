@@ -24,7 +24,6 @@ jobs:
     - name: Hash cargo lockfile
       id: gstsrc
       run: |
-        echo "hash=${{ hashFiles('gst-plugins-rs') }}"
         echo "hash=${{ hashFiles('gst-plugins-rs') }}" >> $GITHUB_OUTPUT
 
   main:
@@ -58,7 +57,9 @@ jobs:
     - name: Cache cargo stuff
       uses: actions/cache@v3
       with:
-        path: ~/.cargo
+        path: |
+          ~/.cargo
+          gst-plugins-rs/target
         key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ needs.bust-cache.outputs.srchash }}
         restore-keys: |
           ${{ runner.os }}-${{ matrix.rust_target }}-cargo-
