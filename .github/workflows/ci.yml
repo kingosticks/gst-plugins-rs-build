@@ -24,7 +24,9 @@ jobs:
     - name: Hash cargo lockfile
       id: gstsrc
       run: |
-        ls -l **/Cargo.lock
+        pwd
+        ls
+        ls gst-plugins-rs
         echo "hash=${{ hashFiles('**/Cargo.lock') }}"
         echo "hash=${{ hashFiles('**/Cargo.lock') }}" >> $GITHUB_OUTPUT
 
@@ -81,7 +83,6 @@ jobs:
         RPI_LINKER="$RPI_DIR/bin/arm-linux-gnueabihf-gcc"
         RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
         echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
-        echo "RUSTFLAGS is ${{ matrix.rust_flags }}"
     
     - name: Build gst-plugins-rs
       run: |
