@@ -24,7 +24,7 @@ jobs:
     - name: Hash cargo lockfile
       id: gstsrc
       run: |
-        echo "hash=${{ hashFiles('gst-plugins-rs') }}" >> $GITHUB_OUTPUT
+        echo "hash=$(git -C gst-plugins-rs rev-parse HEAD)" >> $GITHUB_OUTPUT
 
   main:
     strategy:
