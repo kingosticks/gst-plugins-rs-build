@@ -59,7 +59,7 @@ jobs:
       with:
         path: |
           ~/.cargo
-          gst-plugins-rs/target/${{ matrix.rust_target }}
+          gst-plugins-rs/target/${{ matrix.rust_target }}/release
         key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ needs.bust-cache.outputs.srchash }}
         restore-keys: |
           ${{ runner.os }}-${{ matrix.rust_target }}-cargo-
@@ -86,7 +86,7 @@ jobs:
     
     - name: Build gst-plugins-rs
       run: |
-        ls gst-plugins-rs/target/${{ matrix.rust_target }}
+        ls -a gst-plugins-rs/target/${{ matrix.rust_target }}/release
         env
         cd gst-plugins-rs
         cargo build --target=${{ matrix.rust_target }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
