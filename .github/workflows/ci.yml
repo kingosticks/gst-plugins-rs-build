@@ -21,10 +21,10 @@ jobs:
     - name: Checkout gst-plugins-rs
       run: git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
 
-    - name: Hash cargo lockfile
+    - name: Find latest spotify src commit
       id: gstsrc
       run: |
-        echo "hash=$(git -C gst-plugins-rs rev-parse HEAD)" >> $GITHUB_OUTPUT
+        echo "hash=$(git -C gst-plugins-rs rev-parse HEAD:audio/spotify)" >> $GITHUB_OUTPUT
 
   main:
     strategy:
@@ -55,14 +55,16 @@ jobs:
         cp gst-plugins-rs/audio/spotify/Cargo.toml Cargo.toml.orig
     
     - name: Cache cargo stuff
+      env:
+        CONTAINER_VER: gst-plugin-spotify-build:${{ hashFiles('VERSION') }}
       uses: actions/cache@v3
       with:
         path: |
           ~/.cargo
           gst-plugins-rs/target/${{ matrix.rust_target }}/release
-        key: ${{ runner.os }}-${{ matrix.rust_target }}-cargo-${{ needs.bust-cache.outputs.srchash }}
+        key: ${{ env.CONTAINER_VER }}-${{ matrix.rust_target }}-cargo-${{ needs.bust-cache.outputs.srchash }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.rust_target }}-cargo-
+          gst-plugin-spotify-build:${{ hashFiles('VERSION') }}-${{ matrix.rust_target }}-cargo-
 
     - name: Install cargo deb
       run: cargo install cargo-deb
