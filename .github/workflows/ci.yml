@@ -53,7 +53,6 @@ jobs:
       run: |
         git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
         cp gst-plugins-rs/audio/spotify/Cargo.toml Cargo.toml.orig
-        ls gst-plugins-rs/target/${{ matrix.rust_target }}
     
     - name: Cache cargo stuff
       uses: actions/cache@v3
@@ -87,6 +86,7 @@ jobs:
     
     - name: Build gst-plugins-rs
       run: |
+        ls gst-plugins-rs/target/${{ matrix.rust_target }}
         env
         cd gst-plugins-rs
         cargo build --target=${{ matrix.rust_target }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
