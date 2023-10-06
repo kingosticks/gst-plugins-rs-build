@@ -53,6 +53,7 @@ jobs:
       run: |
         git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
         cp gst-plugins-rs/audio/spotify/Cargo.toml Cargo.toml.orig
+        ls gst-plugins-rs/target/${{ matrix.rust_target }}
     
     - name: Cache cargo stuff
       uses: actions/cache@v3
