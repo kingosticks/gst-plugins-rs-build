@@ -9,6 +9,9 @@ defaults:
 env:
   GST_GIT_REPO: https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
   GST_GIT_BRANCH: main
+  RPI_DIR: $RPI_TOOLS_DIR/arm-bcm2708/arm-linux-gnueabihf
+  RPI_SYSROOT: $RPI_DIR/arm-linux-gnueabihf/sysroot
+  RPI_LINKER: $RPI_DIR/bin/arm-linux-gnueabihf-gcc
 
 jobs:
   # This job must run on the runner because hashFiles() operates on the runner
@@ -78,7 +81,7 @@ jobs:
     - name: Install cargo deb
       run: cargo install cargo-deb
  
-    - name: Configure cross environment
+    - name: Configure PKG_CONFIG cross environment
       if: matrix.linker_target != ''
       run: |
         PKG_CONFIG_ALLOW_CROSS=1
@@ -86,40 +89,37 @@ jobs:
         echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
-    - name: Configure cross environment (RPi)
-      if: matrix.linker_target == 'arm-linux-gnueabihf'
+    - name: Configure RUSTFLAGS
+      if: matrix.rust_flags != ''
       run: |
-        RPI_DIR="/rpi-tools/arm-bcm2708/arm-linux-gnueabihf"
-        RPI_SYSROOT="$RPI_DIR/arm-linux-gnueabihf/sysroot"
-        RPI_LINKER="$RPI_DIR/bin/arm-linux-gnueabihf-gcc"
-        RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
+        RUSTFLAGS="${{ matrix.rust_flags }}"
         echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
     
     - name: Build gst-plugins-rs
       run: |
-        ls -a gst-plugins-rs/target/${{ matrix.rust_target }}/release || ls
         env
         cd gst-plugins-rs
-        cargo build --target=${{ matrix.rust_target }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
+        cargo build --target=${{ matrix.rust_target }} --package ${GST_PLUGIN} --release --config 'profile.release.strip = true'
    
-    - name: Fixup target-specific install path
-      run: |
-        GST_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
-        cat Cargo.toml.orig Cargo.toml.deb | sed "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" > gst-plugins-rs/audio/spotify/Cargo.toml
-   
-    - name: Build deb
+    - name: Create deb package
       env:
-        DEB_GLOB: target/${{ matrix.rust_target }}/debian/${{ env.GST_PLUGIN }}_*.deb
+        DEB_GLOB: target/${{ matrix.rust_target }}/debian/${GST_PLUGIN}_*.deb
       run: |
+        echo "Append package metadata to Cargo.toml"
+        cat Cargo.toml.orig Cargo.toml.deb > gst-plugins-rs/audio/spotify/Cargo.toml
+        echo "Fixup target-specific library install path"
+        GST_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
+        sed -i "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" > gst-plugins-rs/audio/spotify/Cargo.toml
+        echo "Create package"
         cd gst-plugins-rs
-        cargo deb -v --target=${{ matrix.rust_target }} --package ${{ env.GST_PLUGIN }} --no-build
+        cargo deb -v --target=${{ matrix.rust_target }} --package ${GST_PLUGIN} --no-build
         DEB_PATH=$(readlink -m $(find ${{ env.DEB_GLOB }}))
         DEB_NAME=$(basename $DEB_PATH .deb)
         echo "DEB_PATH=$DEB_PATH" >> $GITHUB_ENV
         echo "DEB_NAME=$DEB_NAME" >> $GITHUB_ENV
    
     - name: Check deb
-      run: dpkg-deb --field ${{ env.DEB_PATH }} Package Architecture Version Installed-Size
+      run: dpkg-deb --field $DEB_PATH Package Architecture Version Installed-Size
    
     - name: Upload deb
       uses: actions/upload-artifact@v3
