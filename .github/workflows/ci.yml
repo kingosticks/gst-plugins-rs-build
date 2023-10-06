@@ -16,15 +16,24 @@ jobs:
   bust-cache:
     runs-on: ubuntu-latest
     outputs:
-      srchash: ${{ steps.gstsrc.outputs.hash }}
+      container_version: ${{ steps.container.outputs.version }}
+      spotify_src: ${{ steps.gstsrc.outputs.hash }}
     steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Find latest container version
+      id: container
+      run: |
+        echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+    
     - name: Checkout gst-plugins-rs
       run: git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
 
     - name: Find latest spotify src commit
       id: gstsrc
       run: |
-        echo "hash=$(git -C gst-plugins-rs rev-parse HEAD:audio/spotify)" >> $GITHUB_OUTPUT
+        echo "hash=$(git -C gst-plugins-rs rev-parse --short HEAD:audio/spotify)" >> $GITHUB_OUTPUT
 
   main:
     strategy:
@@ -56,15 +65,15 @@ jobs:
     
     - name: Cache cargo stuff
       env:
-        CONTAINER_VER: gst-plugin-spotify-build:${{ hashFiles('VERSION') }}
+        CONTAINER_VERSION: gst-plugin-spotify-build:${{ needs.bust-cache.outputs.container_version }}
       uses: actions/cache@v3
       with:
         path: |
           ~/.cargo
           gst-plugins-rs/target/${{ matrix.rust_target }}/release
-        key: ${{ env.CONTAINER_VER }}-${{ matrix.rust_target }}-cargo-${{ needs.bust-cache.outputs.srchash }}
+        key: ${{ env.CONTAINER_VERSION }}-${{ matrix.rust_target }}
         restore-keys: |
-          gst-plugin-spotify-build:${{ hashFiles('VERSION') }}-${{ matrix.rust_target }}-cargo-
+          ${{ env.CONTAINER_VERSION }}-
 
     - name: Install cargo deb
       run: cargo install cargo-deb
@@ -99,10 +108,12 @@ jobs:
         cat Cargo.toml.orig Cargo.toml.deb | sed "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" > gst-plugins-rs/audio/spotify/Cargo.toml
    
     - name: Build deb
+      env:
+        DEB_GLOB: target/${{ matrix.rust_target }}/debian/${{ env.GST_PLUGIN }}_*.deb
       run: |
         cd gst-plugins-rs
         cargo deb -v --target=${{ matrix.rust_target }} --package ${{ env.GST_PLUGIN }} --no-build
-        DEB_PATH=$(readlink -m $(find target/${{ matrix.rust_target }}/debian/${{ env.GST_PLUGIN }}_*.deb))
+        DEB_PATH=$(readlink -m $(find ${{ env.DEB_GLOB }}))
         DEB_NAME=$(basename $DEB_PATH .deb)
         echo "DEB_PATH=$DEB_PATH" >> $GITHUB_ENV
         echo "DEB_NAME=$DEB_NAME" >> $GITHUB_ENV
