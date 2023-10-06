@@ -86,7 +86,7 @@ jobs:
     
     - name: Build gst-plugins-rs
       run: |
-        ls -a gst-plugins-rs/target/${{ matrix.rust_target }}/release
+        ls -a gst-plugins-rs/target/${{ matrix.rust_target }}/release || ls
         env
         cd gst-plugins-rs
         cargo build --target=${{ matrix.rust_target }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
