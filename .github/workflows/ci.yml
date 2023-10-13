@@ -10,8 +10,8 @@ env:
   GST_GIT_REPO: https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
   GST_GIT_BRANCH: main
   RPI_DIR: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf
-  RPI_SYSROOT: ${{ env.RPI_DIR }}/arm-linux-gnueabihf/sysroot
-  RPI_LINKER: ${{ env.RPI_DIR }}/bin/arm-linux-gnueabihf-gcc
+  RPI_SYSROOT: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot
+  RPI_LINKER: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
 
 jobs:
   # This job must run on the runner because hashFiles() operates on the runner
@@ -43,7 +43,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - rust_target: arm-unknown-linux-gnueabihf
+        - target: arm-unknown-linux-gnueabihf
           linker: arm-linux-gnueabihf
           rust_flags: -C linker=${{ env.RPI_LINKER }} -L${{ env.RPI_SYSROOT }}/lib -L{{ env.RPI_SYSROOT }}/usr/lib
     runs-on: ubuntu-20.04
@@ -59,7 +59,7 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: stable
-        targets: ${{ matrix.rust_target }}
+        targets: ${{ matrix.target }}
         
     - name: Checkout gst-plugins-rs
       run: |
@@ -73,8 +73,8 @@ jobs:
       with:
         path: |
           ~/.cargo
-          gst-plugins-rs/target/${{ matrix.rust_target }}/release
-        key: ${{ env.CONTAINER_VERSION }}-${{ matrix.rust_target }}
+          gst-plugins-rs/target/${{ matrix.target }}/release
+        key: ${{ env.CONTAINER_VERSION }}-${{ matrix.target }}
         restore-keys: |
           ${{ env.CONTAINER_VERSION }}-
 
@@ -99,11 +99,11 @@ jobs:
       run: |
         env
         cd gst-plugins-rs
-        cargo build --target=${{ matrix.rust_target }} --package ${GST_PLUGIN} --release --config 'profile.release.strip = true'
+        cargo build --target=${{ matrix.target }} --package ${GST_PLUGIN} --release --config 'profile.release.strip = true'
    
     - name: Create deb package
       env:
-        DEB_GLOB: target/${{ matrix.rust_target }}/debian/${GST_PLUGIN}_*.deb
+        DEB_GLOB: target/${{ matrix.target }}/debian/${GST_PLUGIN}_*.deb
       run: |
         echo "Append package metadata to Cargo.toml"
         cat Cargo.toml.orig Cargo.toml.deb > gst-plugins-rs/audio/spotify/Cargo.toml
@@ -112,7 +112,7 @@ jobs:
         sed -i "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" > gst-plugins-rs/audio/spotify/Cargo.toml
         echo "Create package"
         cd gst-plugins-rs
-        cargo deb -v --target=${{ matrix.rust_target }} --package ${GST_PLUGIN} --no-build
+        cargo deb -v --target=${{ matrix.target }} --package ${GST_PLUGIN} --no-build
         DEB_PATH=$(readlink -m $(find ${{ env.DEB_GLOB }}))
         DEB_NAME=$(basename $DEB_PATH .deb)
         echo "DEB_PATH=$DEB_PATH" >> $GITHUB_ENV
