@@ -92,8 +92,8 @@ jobs:
     - name: Configure RUSTFLAGS
       if: matrix.rust_flags != ''
       run: |
-        RUSTFLAGS="${{ matrix.rust_flags }}"
-        echo $(eval "echo RUSTFLAGS=$RUSTFLAGS") >> $GITHUB_ENV
+        RUSTFLAGS=$(eval "echo ${{ matrix.rust_flags }}")
+        echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
     
     - name: Build gst-plugins-rs
       run: |
