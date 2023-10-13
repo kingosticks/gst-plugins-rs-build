@@ -104,7 +104,7 @@ jobs:
     - name: Upload lib
       uses: actions/upload-artifact@v3
       with:
-          name: ${{ matrix.target } lib
+          name: ${{ matrix.target }} lib
           path: gst-plugins-rs/target/${{ matrix.target }}/release/*.so
    
     - name: Create deb package
@@ -128,5 +128,5 @@ jobs:
     - name: Upload deb
       uses: actions/upload-artifact@v3
       with:
-          name: ${{ matrix.target } Debian Package
+          name: ${{ matrix.target }} Debian Package
           path: ${{ env.DEB_PATH }}
