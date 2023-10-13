@@ -45,7 +45,7 @@ jobs:
         include:
         - target: arm-unknown-linux-gnueabihf
           linker: arm-linux-gnueabihf
-          rust_flags: -C linker=$RPI_LINKER -L$RPI_SYSROOT }}/lib -L$RPI_SYSROOT/usr/lib
+          rust_flags: -C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
     needs: bust-cache
