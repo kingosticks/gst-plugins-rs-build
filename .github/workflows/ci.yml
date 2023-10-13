@@ -105,7 +105,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
           name: ${{ matrix.target } lib
-          path: gst-plugins-rs/target/${{ matrix.target }/release/*.so
+          path: gst-plugins-rs/target/${{ matrix.target }}/release/*.so
    
     - name: Create deb package
       env:
