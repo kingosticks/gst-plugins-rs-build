@@ -100,10 +100,16 @@ jobs:
         env | sort
         cd gst-plugins-rs
         cargo build --target=${{ matrix.target }} --package ${GST_PLUGIN} --release --config 'profile.release.strip = true'
+    
+    - name: Upload lib
+      uses: actions/upload-artifact@v3
+      with:
+          name: ${{ matrix.target } lib
+          path: gst-plugins-rs/target/${{ matrix.target }/release/*.so
    
     - name: Create deb package
       env:
-        DEB_GLOB: target/${{ matrix.target }}/debian/${GST_PLUGIN}_*.deb
+        DEB_GLOB: target/${{ matrix.target }}/debian/*.deb
       run: |
         echo "Append package metadata to Cargo.toml"
         cat Cargo.toml.orig Cargo.toml.deb > gst-plugins-rs/audio/spotify/Cargo.toml
@@ -113,10 +119,8 @@ jobs:
         echo "Create package"
         cd gst-plugins-rs
         cargo deb -v --target=${{ matrix.target }} --package ${GST_PLUGIN} --no-build
-        DEB_PATH=$(readlink -m $(find ${{ env.DEB_GLOB }}))
-        DEB_NAME=$(basename $DEB_PATH .deb)
+        DEB_PATH=$(readlink -m $(find target/${{ matrix.target }}/debian/*.deb))
         echo "DEB_PATH=$DEB_PATH" >> $GITHUB_ENV
-        echo "DEB_NAME=$DEB_NAME" >> $GITHUB_ENV
    
     - name: Check deb
       run: dpkg-deb --field $DEB_PATH Package Architecture Version Installed-Size
@@ -124,5 +128,5 @@ jobs:
     - name: Upload deb
       uses: actions/upload-artifact@v3
       with:
-          name: ${{ env.DEB_NAME }}
+          name: ${{ matrix.target } Debian Package
           path: ${{ env.DEB_PATH }}
