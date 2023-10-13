@@ -9,9 +9,9 @@ defaults:
 env:
   GST_GIT_REPO: https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
   GST_GIT_BRANCH: main
-  RPI_DIR: $RPI_TOOLS_DIR/arm-bcm2708/arm-linux-gnueabihf
-  RPI_SYSROOT: $RPI_DIR/arm-linux-gnueabihf/sysroot
-  RPI_LINKER: $RPI_DIR/bin/arm-linux-gnueabihf-gcc
+  RPI_DIR: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf
+  RPI_SYSROOT: ${{ env.RPI_DIR }}/arm-linux-gnueabihf/sysroot
+  RPI_LINKER: ${{ env.RPI_DIR }}/bin/arm-linux-gnueabihf-gcc
 
 jobs:
   # This job must run on the runner because hashFiles() operates on the runner
@@ -44,8 +44,8 @@ jobs:
       matrix:
         include:
         - rust_target: arm-unknown-linux-gnueabihf
-          linker_target: arm-linux-gnueabihf
-          rust_flags: -C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
+          linker: arm-linux-gnueabihf
+          rust_flags: -C linker=${{ env.RPI_LINKER }} -L${{ env.RPI_SYSROOT }}/lib -L{{ env.RPI_SYSROOT }}/usr/lib
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
     needs: bust-cache
@@ -82,10 +82,10 @@ jobs:
       run: cargo install cargo-deb
  
     - name: Configure PKG_CONFIG cross environment
-      if: matrix.linker_target != ''
+      if: matrix.linker != ''
       run: |
         PKG_CONFIG_ALLOW_CROSS=1
-        PKG_CONFIG_PATH="/usr/lib/${{ matrix.linker_target }}/pkgconfig"
+        PKG_CONFIG_PATH="/usr/lib/${{ matrix.linker }}/pkgconfig"
         echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
@@ -93,7 +93,7 @@ jobs:
       if: matrix.rust_flags != ''
       run: |
         RUSTFLAGS="${{ matrix.rust_flags }}"
-        echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
+        echo $(eval "echo RUSTFLAGS=$RUSTFLAGS") >> $GITHUB_ENV
     
     - name: Build gst-plugins-rs
       run: |
