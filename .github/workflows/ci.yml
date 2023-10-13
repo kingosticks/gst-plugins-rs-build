@@ -97,7 +97,7 @@ jobs:
     
     - name: Build gst-plugins-rs
       run: |
-        env
+        env | sort
         cd gst-plugins-rs
         cargo build --target=${{ matrix.target }} --package ${GST_PLUGIN} --release --config 'profile.release.strip = true'
    
@@ -109,7 +109,7 @@ jobs:
         cat Cargo.toml.orig Cargo.toml.deb > gst-plugins-rs/audio/spotify/Cargo.toml
         echo "Fixup target-specific library install path"
         GST_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
-        sed -i "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" > gst-plugins-rs/audio/spotify/Cargo.toml
+        sed -i "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" gst-plugins-rs/audio/spotify/Cargo.toml
         echo "Create package"
         cd gst-plugins-rs
         cargo deb -v --target=${{ matrix.target }} --package ${GST_PLUGIN} --no-build
