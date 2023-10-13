@@ -2,16 +2,55 @@ name: CI
 
 on: [push, pull_request]
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  GST_GIT_REPO: https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
+  GST_GIT_BRANCH: main
+  RPI_DIR: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf
+  RPI_SYSROOT: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot
+  RPI_LINKER: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
+
 jobs:
+  # This job must run on the runner because hashFiles() operates on the runner
+  # by design, not inside the defined container (actions/runner#837).
+  bust-cache:
+    runs-on: ubuntu-latest
+    outputs:
+      container_version: ${{ steps.container.outputs.version }}
+      spotify_src: ${{ steps.gstsrc.outputs.hash }}
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Find latest container version
+      id: container
+      run: |
+        echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+    
+    - name: Checkout gst-plugins-rs
+      run: git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
+
+    - name: Find latest spotify src commit
+      id: gstsrc
+      run: |
+        echo "hash=$(git -C gst-plugins-rs rev-parse --short HEAD:audio/spotify)" >> $GITHUB_OUTPUT
+
   main:
     strategy:
       fail-fast: false
+      matrix:
+        include:
+        - target: arm-unknown-linux-gnueabihf
+          linker: arm-linux-gnueabihf
+          rust_flags: -C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
+    needs: bust-cache
     env:
       GST_PLUGIN: gst-plugin-spotify
-      RUST_TARGET: arm-unknown-linux-gnueabihf
-      LINKER_TARGET: arm-linux-gnueabihf
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
@@ -20,52 +59,74 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: stable
-        targets: ${{ env.RUST_TARGET }}
+        targets: ${{ matrix.target }}
+        
+    - name: Checkout gst-plugins-rs
+      run: |
+        git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
+        cp gst-plugins-rs/audio/spotify/Cargo.toml Cargo.toml.orig
+    
+    - name: Cache cargo stuff
+      env:
+        CONTAINER_VERSION: gst-plugin-spotify-build:${{ needs.bust-cache.outputs.container_version }}
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo
+          gst-plugins-rs/target/${{ matrix.target }}/release
+        key: ${{ env.CONTAINER_VERSION }}-${{ matrix.target }}
+        restore-keys: |
+          ${{ env.CONTAINER_VERSION }}-
 
     - name: Install cargo deb
       run: cargo install cargo-deb
-
-    - name: Checkout gst-plugins-rs
+ 
+    - name: Configure PKG_CONFIG cross environment
+      if: matrix.linker != ''
       run: |
-        GST_GIT_REPO=https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
-        GST_GIT_BRANCH=main
-        git clone --depth 1 -b $GST_GIT_BRANCH $GST_GIT_REPO
-        GST_SRC=$(basename $GST_GIT_REPO .git)
-        cp $GST_SRC/audio/spotify/Cargo.toml Cargo.toml.orig
-        echo "GST_SRC=$GST_SRC"
-        echo "GST_SRC=$GST_SRC" >> $GITHUB_ENV
-   
+        PKG_CONFIG_ALLOW_CROSS=1
+        PKG_CONFIG_PATH="/usr/lib/${{ matrix.linker }}/pkgconfig"
+        echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+    - name: Configure RUSTFLAGS
+      if: matrix.rust_flags != ''
+      run: |
+        RUSTFLAGS=$(eval "echo ${{ matrix.rust_flags }}")
+        echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
+    
     - name: Build gst-plugins-rs
       run: |
-        export PKG_CONFIG_ALLOW_CROSS=1
-        export PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
-        RPI_STUFF="/rpi-tools/arm-bcm2708/${{ env.LINKER_TARGET }}"
-        RPI_SYSROOT="$RPI_STUFF/${{ env.LINKER_TARGET }}/sysroot"
-        RPI_LINKER="$RPI_STUFF/bin/${{ env.LINKER_TARGET }}-gcc"
-        export RUSTFLAGS="-C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
-        cd ${{ env.GST_SRC }}
-        cargo build --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --release --config 'profile.release.strip = true'
+        env | sort
+        cd gst-plugins-rs
+        cargo build --target=${{ matrix.target }} --package ${GST_PLUGIN} --release --config 'profile.release.strip = true'
+    
+    - name: Upload lib
+      uses: actions/upload-artifact@v3
+      with:
+          name: ${{ matrix.target }} lib
+          path: gst-plugins-rs/target/${{ matrix.target }}/release/*.so
    
-    - name: Prep deb control
+    - name: Create deb package
+      env:
+        DEB_GLOB: target/${{ matrix.target }}/debian/*.deb
       run: |
-        export PKG_CONFIG_PATH="/usr/lib/${{ env.LINKER_TARGET }}/pkgconfig"
+        echo "Append package metadata to Cargo.toml"
+        cat Cargo.toml.orig Cargo.toml.deb > gst-plugins-rs/audio/spotify/Cargo.toml
+        echo "Fixup target-specific library install path"
         GST_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
-        cat Cargo.toml.orig Cargo.toml.deb | sed "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" > ${{ env.GST_SRC }}/audio/spotify/Cargo.toml
-   
-    - name: Build deb
-      run: |
-        cd ${{ env.GST_SRC }}
-        cargo deb --target=${{ env.RUST_TARGET }} --package ${{ env.GST_PLUGIN }} --no-build
-        DEB_FILE=${{ env.GST_SRC }}/$(find target/${{ env.RUST_TARGET }}/debian/gst-plugin-spotify_*.deb)
-        DEB_NAME=$(basename $DEB_FILE .deb)
-        echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
-        echo "DEB_NAME=$DEB_NAME" >> $GITHUB_ENV
+        sed -i "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" gst-plugins-rs/audio/spotify/Cargo.toml
+        echo "Create package"
+        cd gst-plugins-rs
+        cargo deb -v --target=${{ matrix.target }} --package ${GST_PLUGIN} --no-build
+        DEB_PATH=$(readlink -m $(find target/${{ matrix.target }}/debian/*.deb))
+        echo "DEB_PATH=$DEB_PATH" >> $GITHUB_ENV
    
     - name: Check deb
-      run: dpkg-deb --field ${{ env.DEB_FILE }} Package Architecture Version Installed-Size
+      run: dpkg-deb --field $DEB_PATH Package Architecture Version Installed-Size
    
     - name: Upload deb
       uses: actions/upload-artifact@v3
       with:
-          name: ${{ env.DEB_NAME }}
-          path: ${{ env.DEB_FILE }}
+          name: ${{ matrix.target }} Debian Package
+          path: ${{ env.DEB_PATH }}
