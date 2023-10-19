@@ -18,10 +18,11 @@ RUN apt-get update \
 
 ENV RPI_TOOLS_DIR=/rpi-tools
 RUN git clone --depth=1 https://github.com/raspberrypi/tools $RPI_TOOLS_DIR && rm -rf $RPI_TOOLS_DIR/.git
-ARG RPI_TOOLS=$RPI_TOOLS_DIR/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf
 
-RUN mkdir -p ~/.cargo/
-RUN touch ~/.cargo/config
-RUN echo "[target.arm-unknown-linux-gnueabihf]\nobjcopy = { path = \"$RPI_TOOLS-objcopy\" }\nstrip = { path = \"$RPI_TOOLS-strip\" }" > ~/.cargo/config
+ARG RPI_STUFF=$RPI_TOOLS_DIR/arm-bcm2708/arm-linux-gnueabihf
+ENV RPI_BIN=$RPI_STUFF/bin
+ENV RPI_SYSROOT=$RPI_STUFF/arm-linux-gnueabihf/sysroot
+
+ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUSTFLAGS="-C linker=$RPI_BIN/arm-linux-gnueabihf-gcc -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
 
 COPY VERSION /

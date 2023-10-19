@@ -9,9 +9,8 @@ defaults:
 env:
   GST_GIT_REPO: https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
   GST_GIT_BRANCH: main
-  RPI_DIR: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf
   RPI_SYSROOT: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf/arm-linux-gnueabihf/sysroot
-  RPI_LINKER: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
+  RPI_BIN: /rpi-tools/arm-bcm2708/arm-linux-gnueabihf/bin
 
 jobs:
   # This job must run on the runner because hashFiles() operates on the runner
@@ -44,8 +43,9 @@ jobs:
       matrix:
         include:
         - target: arm-unknown-linux-gnueabihf
-          linker: arm-linux-gnueabihf
-          rust_flags: -C linker=$RPI_LINKER -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
+          toolchain: arm-linux-gnueabihf 
+          toolchain_bin: ${RPI_BIN}
+          rust_flags: -C linker=${TOOLCHAIN_BIN}/${TOOLCHAIN}-gcc -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
     needs: bust-cache
@@ -80,26 +80,39 @@ jobs:
 
     - name: Install cargo deb
       run: cargo install cargo-deb
- 
-    - name: Configure PKG_CONFIG cross environment
-      if: matrix.linker != ''
-      run: |
-        PKG_CONFIG_ALLOW_CROSS=1
-        PKG_CONFIG_PATH="/usr/lib/${{ matrix.linker }}/pkgconfig"
-        echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
     - name: Configure RUSTFLAGS
       if: matrix.rust_flags != ''
       run: |
         RUSTFLAGS=$(eval "echo ${{ matrix.rust_flags }}")
         echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
+
+    - name: Configure environment
+      run: |
+        TARGET=${{ matrix.target }}
+        TOOLCHAIN=${{ matrix.toolchain }}
+        TOOLCHAIN_BIN=$(eval "echo ${{ matrix.toolchain_bin }}")
+        
+        STRIP=${TOOLCHAIN_BIN}/${TOOLCHAIN}-strip
+        PKG_CONFIG_ALLOW_CROSS=1
+        export PKG_CONFIG_PATH=/usr/lib/$TOOLCHAIN/pkgconfig
+        GST_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
+        
+        echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "GST_PLUGINS_DIR=$GST_PLUGINS_DIR" >> $GITHUB_ENV
+        echo "TARGET=$TARGET" >> $GITHUB_ENV
+        echo "STRIP=$STRIP" >> $GITHUB_ENV
     
     - name: Build gst-plugins-rs
       run: |
         env | sort
         cd gst-plugins-rs
-        cargo build --target=${{ matrix.target }} --package ${GST_PLUGIN} --release --config 'profile.release.strip = true'
+        cargo build --target=${TARGET} --package ${GST_PLUGIN} --release
+
+    - name: Strip binary
+      run: |
+        $STRIP gst-plugins-rs/target/${TARGET}/release/*.so
     
     - name: Upload lib
       uses: actions/upload-artifact@v3
@@ -107,19 +120,18 @@ jobs:
           name: ${{ matrix.target }} lib
           path: gst-plugins-rs/target/${{ matrix.target }}/release/*.so
    
-    - name: Create deb package
-      env:
-        DEB_GLOB: target/${{ matrix.target }}/debian/*.deb
+    - name: Prepare deb package
       run: |
         echo "Append package metadata to Cargo.toml"
         cat Cargo.toml.orig Cargo.toml.deb > gst-plugins-rs/audio/spotify/Cargo.toml
         echo "Fixup target-specific library install path"
-        GST_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
         sed -i "s@%GST_PLUGINS_DIR%@$GST_PLUGINS_DIR@" gst-plugins-rs/audio/spotify/Cargo.toml
-        echo "Create package"
+
+    - name: Create deb package
+      run: |
         cd gst-plugins-rs
-        cargo deb -v --target=${{ matrix.target }} --package ${GST_PLUGIN} --no-build
-        DEB_PATH=$(readlink -m $(find target/${{ matrix.target }}/debian/*.deb))
+        cargo deb -v --target=${TARGET} --package ${GST_PLUGIN} --no-build
+        DEB_PATH=$(readlink -m $(find target/${TARGET}/debian/*.deb))
         echo "DEB_PATH=$DEB_PATH" >> $GITHUB_ENV
    
     - name: Check deb

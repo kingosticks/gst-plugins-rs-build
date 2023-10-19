@@ -1,0 +1,9 @@
+[target.arm-unknown-linux-gnueabihf]
+linker = "$RPI_BIN/arm-linux-gnueabihf-gcc"
+rustflags = "-L$RPI_SYSROOT/lib -L$RPI_TOOLS_SYSROOT/usr/lib"
+objcopy = { path = "/rpi-tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-objcopy" }
+strip = { path = "/rpi-tools/arm-bcm2708/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-strip" }
+
+[target.armv7-unknown-linux-gnueabihf]
+objcopy = { path = "arm-linux-gnueabihf-objcopy" }
+strip = { path = arm-linux-gnueabihf-strip" }"
