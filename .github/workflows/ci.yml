@@ -2,28 +2,139 @@ name: CI
 
 on: [push, pull_request]
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  GST_GIT_REPO: https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
+  GST_GIT_BRANCH: main
+  GST_SRC_DIR: gst-plugins-rs/audio/spotify
+# $RPI_BIN and $RPI_SYSROOT are defined in the docker images
+
 jobs:
+  # This job must run on the runner because hashFiles() operates on the runner
+  # by design, not inside the defined container (actions/runner#837).
+  bust-cache:
+    runs-on: ubuntu-latest
+    outputs:
+      container_version: ${{ steps.container.outputs.version }}
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Find latest container version
+      id: container
+      run: |
+        echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+
   main:
     strategy:
       fail-fast: false
+      matrix:
+        include:
+        - target: arm-unknown-linux-gnueabihf
+          linker: arm-linux-gnueabihf
+          linker_path: $RPI_BIN/
+          extra_rust_flags: -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
+        - target: aarch64-unknown-linux-gnu
+          linker: aarch64-linux-gnu
+        - target: x86_64-unknown-linux-gnu
+          linker: x86_64-linux-gnu
     runs-on: ubuntu-20.04
-    container: ghcr.io/mopidy/gst-plugin-spotify-deb:latest
+    container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
+    needs: bust-cache
     steps:
-      
-      - name: Checkout repo
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - name: Copy home stuff to stupid github home
-        run: cp -rT /root $HOME
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: stable
+        targets: ${{ matrix.target }}
+        
+    - name: Checkout gst-plugins-rs
+      run: |
+        git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+    - name: Backup original plugin Cargo.toml file
+      run: |
+        cp ${GST_SRC_DIR}/Cargo.toml Cargo.toml.orig
+    
+    - name: Cache cargo stuff
+      env:
+        CONTAINER_VERSION: gst-plugin-spotify-build:${{ needs.bust-cache.outputs.container_version }}
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo
+          gst-plugins-rs/target/${{ matrix.target }}/release
+        key: ${{ env.CONTAINER_VERSION }}-${{ matrix.target }}
+        restore-keys: |
+          ${{ env.CONTAINER_VERSION }}-
 
-      - name: Build deb
-        run: ./entrypoint.sh
+    - name: Install cargo deb
+      run: cargo install cargo-deb
 
-      - name: Upload deb
-        uses: actions/upload-artifact@v3
-        with:
-            name: gst-plugin-spotify.deb
-            path: /release/*.deb
+    - name: Configure environment
+      run: |
+        TARGET=${{ matrix.target }}
+        LINKER=${{ matrix.linker }}
+        LINKER_PATH=$(eval "echo ${{ matrix.linker_path }}")
+        EXTRA_RUSTFLAGS=$(eval "echo ${{ matrix.extra_rust_flags }}")
+        
+        [ $(gcc -dumpmachine) != "{$LINKER}" ] && PKG_CONFIG_ALLOW_CROSS=1
+        export PKG_CONFIG_PATH=/usr/lib/${LINKER}/pkgconfig
+        export LINKER_TOOLS=${LINKER_PATH}${LINKER}
+        export RUSTFLAGS="-C linker=${LINKER_TOOLS}-gcc $EXTRA_RUSTFLAGS"
+        
+        echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
+        echo "LINKER_TOOLS=$LINKER_TOOLS" >> $GITHUB_ENV
+        echo "TARGET=$TARGET" >> $GITHUB_ENV
+
+    - name: Build gst-plugins-rs
+      run: |
+        env | sort
+        pushd ${GST_SRC_DIR}
+        cargo build --target=${TARGET} --release
+
+    - name: Strip binary
+      run: |
+        SO_FILE=$(find gst-plugins-rs/target/${TARGET}/release/*.so)
+        ls -l $SO_FILE
+        ${LINKER_TOOLS}-strip $SO_FILE
+        ls -l $SO_FILE
+    
+    - name: Upload lib
+      uses: actions/upload-artifact@v3
+      with:
+          name: ${{ matrix.target }} lib
+          path: gst-plugins-rs/target/${{ matrix.target }}/release/*.so
+   
+    - name: Prepare deb package
+      run: |
+        echo "Append package metadata to Cargo.toml"
+        cat Cargo.toml.orig Cargo.toml.deb > ${GST_SRC_DIR}/Cargo.toml
+        echo "Fixup target-specific library install path"
+        TARGET_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
+        sed -i "s@%GST_PLUGINS_DIR%@$TARGET_PLUGINS_DIR@" ${GST_SRC_DIR}/Cargo.toml
+
+    - name: Create deb package
+      run: |
+        pushd ${GST_SRC_DIR}
+        cargo deb -v --target=${TARGET} --no-build
+   
+    - name: Check deb
+      run: |
+        DEB_FILE=$(find gst-plugins-rs/target/${TARGET}/debian/*.deb)
+        dpkg-deb --field $DEB_FILE Package Architecture Version Installed-Size
+        echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
+   
+    - name: Upload deb
+      uses: actions/upload-artifact@v3
+      with:
+          name: ${{ matrix.target }} Debian Package
+          path: ${{ env.DEB_FILE }}
