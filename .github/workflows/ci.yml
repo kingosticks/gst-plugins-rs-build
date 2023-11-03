@@ -43,9 +43,11 @@ jobs:
       matrix:
         include:
         - target: arm-unknown-linux-gnueabihf
-          toolchain: arm-linux-gnueabihf 
-          toolchain_bin: ${RPI_BIN}
-          rust_flags: -C linker=${TOOLCHAIN_BIN}/${TOOLCHAIN}-gcc -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
+          linker: arm-linux-gnueabihf
+          linker_path: ${RPI_BIN}
+          extra_rust_flags: -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
+        - target: aarch64-unknown-linux-gnu
+          linker: aarch64-linux-gnu
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
     needs: bust-cache
@@ -81,28 +83,32 @@ jobs:
     - name: Install cargo deb
       run: cargo install cargo-deb
 
-    - name: Configure RUSTFLAGS
-      if: matrix.rust_flags != ''
-      run: |
-        RUSTFLAGS=$(eval "echo ${{ matrix.rust_flags }}")
-        echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
-
     - name: Configure environment
       run: |
         TARGET=${{ matrix.target }}
-        TOOLCHAIN=${{ matrix.toolchain }}
-        TOOLCHAIN_BIN=$(eval "echo ${{ matrix.toolchain_bin }}")
+        LINKER=${{ matrix.linker }}
         
-        STRIP=${TOOLCHAIN_BIN}/${TOOLCHAIN}-strip
         PKG_CONFIG_ALLOW_CROSS=1
-        export PKG_CONFIG_PATH=/usr/lib/$TOOLCHAIN/pkgconfig
+        export PKG_CONFIG_PATH=/usr/lib/${LINKER}/pkgconfig
         GST_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
         
         echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
         echo "GST_PLUGINS_DIR=$GST_PLUGINS_DIR" >> $GITHUB_ENV
         echo "TARGET=$TARGET" >> $GITHUB_ENV
-        echo "STRIP=$STRIP" >> $GITHUB_ENV
+        echo "LINKER=$LINKER" >> $GITHUB_ENV
+
+    - name: Add linker tools to path
+      if: matrix.linker_path != ''
+      run: |
+        LINKER_PATH=$(eval "echo ${{ matrix.linker_path }}")
+        echo "PATH=$LINKER_PATH:$PATH" >> $GITHUB_ENV
+        which $LINKER
+
+    - name: Configure RUSTFLAGS
+      run: |
+        RUSTFLAGS=$(eval "echo -C linker=${LINKER}-gcc ${{ matrix.extra_rust_flags }}")
+        echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
     
     - name: Build gst-plugins-rs
       run: |
@@ -112,7 +118,10 @@ jobs:
 
     - name: Strip binary
       run: |
-        $STRIP gst-plugins-rs/target/${TARGET}/release/*.so
+        SO_FILE=$(find gst-plugins-rs/target/${TARGET}/release/*.so)
+        ls -l $SO_FILE
+        ${LINKER}-strip $SO_FILE
+        ls -l $SO_FILE
     
     - name: Upload lib
       uses: actions/upload-artifact@v3
