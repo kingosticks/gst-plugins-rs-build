@@ -3,13 +3,16 @@ IMAGE = gst-plugin-spotify-build
 VERSION = $(shell cat VERSION)
 WORKDIR = /gst-plugin-spotify-build
 
+ifdef GST_PLUGINS_RS_SRC
+  GST_PLUGINS_RS_MOUNT := "-v ${GST_PLUGINS_RS_SRC}:${WORKDIR}/gst-plugins-rs:z"
+endif
+
 .PHONY: build release git-release docker-release
 
-build: docker-build build-armhf build-x86_64
+build: docker-build build-armhf build-arm64 build-x86_64
 
-build-armhf:
-	[ -v GST_PLUGINS_RS_SRC ] && export GST_PLUGINS_RS_MOUNT="-v ${GST_PLUGINS_RS_SRC}:${WORKDIR}/gst-plugins-rs:z"
-	docker run ${GST_PLUGINS_RS_MOUNT} -v .:${WORKDIR}:z --workdir ${WORKDIR} ${REPO}/${IMAGE}:${VERSION} /bin/bash entrypoint.sh armhf
+build-%:
+	docker run ${GST_PLUGINS_RS_MOUNT} -v .:${WORKDIR}:z --workdir ${WORKDIR} ${REPO}/${IMAGE}:${VERSION} /bin/bash entrypoint.sh $*
 	
 docker-build:
 	docker build --tag ${REPO}/${IMAGE}:${VERSION} --file Dockerfile .
