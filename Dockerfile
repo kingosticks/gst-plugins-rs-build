@@ -1,6 +1,6 @@
 FROM debian:bullseye-slim
 
-LABEL org.opencontainers.image.source https://github.com/mopidy/gst-plugin-spotify-build
+LABEL org.opencontainers.image.source https://github.com/mopidy/gst-plugins-rs-build
 
 RUN dpkg --add-architecture armhf
 RUN dpkg --add-architecture arm64

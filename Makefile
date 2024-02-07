@@ -1,7 +1,8 @@
 REPO = ghcr.io/mopidy
-IMAGE = gst-plugin-spotify-build
+IMAGE = gst-plugins-rs-build
 VERSION = $(shell cat VERSION)
-WORKDIR = /gst-plugin-spotify-build
+WORKDIR = /gst-plugins-rs-build
+PLUGIN = audio/spotify
 
 ifdef GST_PLUGINS_RS_SRC
   GST_PLUGINS_RS_MOUNT := "-v ${GST_PLUGINS_RS_SRC}:${WORKDIR}/gst-plugins-rs:z"
@@ -12,7 +13,7 @@ endif
 build: docker-build build-armhf build-arm64 build-x86_64
 
 build-%:
-	docker run ${GST_PLUGINS_RS_MOUNT} -v .:${WORKDIR}:z --workdir ${WORKDIR} ${REPO}/${IMAGE}:${VERSION} /bin/bash entrypoint.sh $*
+	docker run ${GST_PLUGINS_RS_MOUNT} -v .:${WORKDIR}:z --workdir ${WORKDIR} ${REPO}/${IMAGE}:${VERSION} /bin/bash entrypoint.sh $* ${PLUGIN}
 	
 docker-build:
 	docker build --tag ${REPO}/${IMAGE}:${VERSION} --file Dockerfile .
