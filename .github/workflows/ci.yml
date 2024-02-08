@@ -45,7 +45,7 @@ jobs:
         - target: x86_64-unknown-linux-gnu
           linker: x86_64-linux-gnu
     runs-on: ubuntu-20.04
-    container: ghcr.io/mopidy/gst-plugin-spotify-build:latest
+    container: ghcr.io/mopidy/gst-plugins-rs-build:latest
     needs: bust-cache
     steps:
     - name: Checkout repo
@@ -67,7 +67,7 @@ jobs:
     
     - name: Cache cargo stuff
       env:
-        CONTAINER_VERSION: gst-plugin-spotify-build:${{ needs.bust-cache.outputs.container_version }}
+        CONTAINER_VERSION: gst-plugins-rs-build:${{ needs.bust-cache.outputs.container_version }}
       uses: actions/cache@v3
       with:
         path: |
