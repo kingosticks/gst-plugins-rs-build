@@ -68,7 +68,7 @@ jobs:
     - name: Cache cargo stuff
       env:
         CONTAINER_VERSION: gst-plugins-rs-build:${{ needs.bust-cache.outputs.container_version }}
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo
