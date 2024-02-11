@@ -112,7 +112,7 @@ jobs:
         ls -l $SO_FILE
     
     - name: Upload lib
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
           name: ${{ matrix.target }} lib
           path: gst-plugins-rs/target/${{ matrix.target }}/release/*.so
@@ -137,7 +137,7 @@ jobs:
         echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
    
     - name: Upload deb
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
           name: ${{ matrix.target }} Debian Package
           path: ${{ env.DEB_FILE }}
