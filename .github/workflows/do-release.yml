@@ -1,0 +1,28 @@
+name: Create Release's PR Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      gst-repo:
+        description: 'gst-plugins-rs source repo'
+        required: true
+        default: 'https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git'
+        type: string
+      gst-version:
+        description: 'gst-plugins-rs branch/tag'
+        required: true
+        default: 'main'
+        type: string
+      gst-plugin:
+        description: 'path to plugin'
+        required: true
+        default: 'audio/spotify'
+        type: string
+
+jobs:
+  do-release-workflow:
+    uses: ./.github/workflows/base.yml
+    with:
+      gst_repo: ${{ github.event.inputs.gst-repo }}
+      gst_version: ${{ github.event.inputs.gst-version }}
+      gst_plugin: ${{ github.event.inputs.gst-plugin }}
