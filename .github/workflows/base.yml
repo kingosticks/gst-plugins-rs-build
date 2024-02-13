@@ -16,8 +16,8 @@ defaults:
     shell: bash
 
 env:
-  GST_GIT_REPO: https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
-  GST_GIT_BRANCH: main
+  GST_GIT_REPO: ${{ inputs.src-repo }}
+  GST_GIT_BRANCH: ${{ inputs.gst_version }}
   GST_SRC_DIR: gst-plugins-rs/${{ inputs.gst_plugin }}
 
 jobs:
@@ -67,7 +67,7 @@ jobs:
         
     - name: Checkout gst-plugins-rs
       run: |
-        git clone --depth 1 -b ${{ inputs.gst_version }} ${{ inputs.src-repo }}
+        git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
 
     - name: Backup original plugin Cargo.toml file
       run: |
