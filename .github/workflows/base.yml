@@ -15,11 +15,6 @@ defaults:
   run:
     shell: bash
 
-env:
-  GST_GIT_REPO: ${{ inputs.src-repo }}
-  GST_GIT_BRANCH: ${{ inputs.gst_version }}
-  GST_SRC_DIR: gst-plugins-rs/${{ inputs.gst_plugin }}
-
 jobs:
   # This job must run on the runner because hashFiles() operates on the runner
   # by design, not inside the defined container (actions/runner#837).
@@ -37,6 +32,11 @@ jobs:
         echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
 
   main:
+    env:
+      GST_GIT_REPO: ${{ inputs.src-repo }}
+      GST_GIT_BRANCH: ${{ inputs.gst_version }}
+      GST_SRC_DIR: gst-plugins-rs/${{ inputs.gst_plugin }}
+
     strategy:
       fail-fast: false
       matrix:
