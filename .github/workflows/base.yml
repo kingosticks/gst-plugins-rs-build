@@ -6,6 +6,7 @@ on:
         type: string
       gst_version:
         required: true
+        default: main
         type: string
       gst_plugin:
         required: true
