@@ -42,7 +42,6 @@ jobs:
       GST_GIT_REPO: ${{ inputs.gst_repo }}
       GST_GIT_BRANCH: ${{ inputs.gst_version }}
       GST_SRC_DIR: gst-plugins-rs/${{ inputs.gst_plugin }}
-      GST_TEST: hello
 
     strategy:
       fail-fast: false
@@ -74,7 +73,6 @@ jobs:
         
     - name: Checkout gst-plugins-rs
       run: |
-        env | sort
         git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
 
     - name: Backup original plugin Cargo.toml file
