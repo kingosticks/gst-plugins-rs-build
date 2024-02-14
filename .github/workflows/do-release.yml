@@ -1,4 +1,4 @@
-name: Create Release's PR Workflow
+name: Manual Release Workflow
 
 on:
   workflow_dispatch:
