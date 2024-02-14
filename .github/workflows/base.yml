@@ -3,17 +3,14 @@ on:
     inputs:
       gst_repo:
         description: 'gst-plugins-rs source repo'
-        required: true
         default: 'https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git'
         type: string
       gst_version:
         description: 'gst-plugins-rs branch/tag'
-        required: true
         default: 'main'
         type: string
       gst_plugin:
         description: 'path to plugin'
-        required: true
         default: 'audio/spotify'
         type: string
 
