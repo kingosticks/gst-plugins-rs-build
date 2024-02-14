@@ -2,14 +2,19 @@ on:
   workflow_call:
     inputs:
       gst_repo:
+        description: 'gst-plugins-rs source repo'
         required: true
+        default: 'https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git'
         type: string
       gst_version:
+        description: 'gst-plugins-rs branch/tag'
         required: true
-        default: main
+        default: 'main'
         type: string
       gst_plugin:
+        description: 'path to plugin'
         required: true
+        default: 'audio/spotify'
         type: string
 
 defaults:
@@ -37,6 +42,7 @@ jobs:
       GST_GIT_REPO: ${{ inputs.src-repo }}
       GST_GIT_BRANCH: ${{ inputs.gst_version }}
       GST_SRC_DIR: gst-plugins-rs/${{ inputs.gst_plugin }}
+      GST_TEST: hello
 
     strategy:
       fail-fast: false
@@ -68,6 +74,7 @@ jobs:
         
     - name: Checkout gst-plugins-rs
       run: |
+        env | sort
         git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
 
     - name: Backup original plugin Cargo.toml file
