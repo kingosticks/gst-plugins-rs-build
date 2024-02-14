@@ -61,6 +61,7 @@ jobs:
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugins-rs-build:latest
     needs: bust-cache
+    name: Build ${{ env.GST_SRC_DIR }} (${{ env.GST_GIT_BRANCH }}) for ${{ matrix.target }}
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
