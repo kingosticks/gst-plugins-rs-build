@@ -46,7 +46,7 @@ jobs:
           echo "NAME_AND_VERSION=$(ls stuff | head -n 1 | cut -d '_' -f -2)" >> $GITHUB_ENV
 
       - name: Draft the release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v4
         with:
           files: stuff/*
           draft: true
