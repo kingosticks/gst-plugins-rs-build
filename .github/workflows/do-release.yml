@@ -28,7 +28,7 @@ jobs:
       gst_plugin: ${{ github.event.inputs.gst_plugin }}
 
   release:
-    name: Prepeare release
+    name: Prepare release
     needs: build
     runs-on: ubuntu-latest
     permissions: 
@@ -37,16 +37,20 @@ jobs:
       - name: Download everything we built
         uses: actions/download-artifact@v4
         with:
-          path: goodies
+          path: stuff
           merge-multiple: true
 
-      - run: ls -R goodies  
-      
+      - name: Find versions
+        run: |
+          ls -R stuff
+          echo "NAME_AND_VERSION=$(ls stuff | head -n 1 | cut -d '_' -f -2)" >> $GITHUB_ENV
+
       - name: Draft the release
         uses: softprops/action-gh-release@v1
         with:
-          files: goodies/*
+          files: stuff/*
           draft: true
-          body: 'gst-plugins-rs plugin ${{ github.event.inputs.gst_plugin }} version ${{ github.event.inputs.gst_version }}'
+          name: '${{ env.NAME_AND_VERSION }}'
+          body: '${{ github.event.inputs.gst_repo }} ${{ github.event.inputs.gst_plugin }} v${{ github.event.inputs.gst_version }}'
           
         
