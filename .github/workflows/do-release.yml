@@ -31,6 +31,8 @@ jobs:
     name: Prepeare release
     needs: build
     runs-on: ubuntu-latest
+    permissions: 
+          contents: write
     steps:
       - name: Download everything we built
         uses: actions/download-artifact@v4
