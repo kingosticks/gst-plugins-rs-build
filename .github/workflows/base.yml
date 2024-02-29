@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-20.04
     container: ghcr.io/mopidy/gst-plugins-rs-build:latest
     needs: bust-cache
-    name: Build ${{ matrix.target }}
+    name: Build ${{ inputs.gst_plugin }} ${{ inputs.gst_version }} ${{ matrix.linker }}
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
