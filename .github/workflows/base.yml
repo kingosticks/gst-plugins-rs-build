@@ -113,8 +113,9 @@ jobs:
 
     - name: Build gst-plugins-rs
       run: |
-        env | sort
         pushd ${GST_SRC_DIR}
+        echo "PLUGIN_NAME_VER=$(cargo pkgid | cut -d '#' -f2)" >> $GITHUB_ENV
+        env | sort
         cargo build --target=${TARGET} --release
 
     - name: Strip binary
@@ -127,7 +128,7 @@ jobs:
     - name: Upload lib
       uses: actions/upload-artifact@v4
       with:
-          name: ${{ matrix.target }} lib
+          name: ${{ env.PLUGIN_NAME_VER }} ${{ matrix.target }} lib
           path: gst-plugins-rs/target/${{ matrix.target }}/release/*.so
    
     - name: Prepare deb package
@@ -152,5 +153,5 @@ jobs:
     - name: Upload deb
       uses: actions/upload-artifact@v4
       with:
-          name: ${{ matrix.target }} Debian Package
+          name: ${{ env.PLUGIN_NAME_VER }} ${{ matrix.target }} Debian Package
           path: ${{ env.DEB_FILE }}
