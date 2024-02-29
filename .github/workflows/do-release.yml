@@ -20,9 +20,31 @@ on:
         type: string
 
 jobs:
-  do-release-workflow:
+  build:
     uses: ./.github/workflows/base.yml
     with:
       gst_repo: ${{ github.event.inputs.gst_repo }}
       gst_version: ${{ github.event.inputs.gst_version }}
       gst_plugin: ${{ github.event.inputs.gst_plugin }}
+
+  release:
+    name: Prepeare release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download everything we built
+        uses: actions/download-artifact@v4
+        with:
+          path: goodies
+          merge-multiple: true
+
+      - run: ls -R goodies  
+      
+      - name: Draft the release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: goodies/*
+          draft: true
+          body: 'gst-plugins-rs plugin ${{ github.event.inputs.gst_plugin }} version ${{ github.event.inputs.gst_version }}'
+          
+        
