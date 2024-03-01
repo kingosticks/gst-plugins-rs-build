@@ -1,3 +1,5 @@
+# About
+
 This repository is primarily for compiling (and currently, also hosting) Debian packages
 for [gst-plugins-rs](https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs>) plugins.
 Right now this is geared around the spotify plugin but could be extended to other
@@ -14,7 +16,7 @@ package with the provided cross-compiling Docker container and supporting files.
 
 # Compiling
 
-The following two methods compile the latest development version of gst-plugins-spotify.
+The following two methods compile the latest development version of gst-plugins-rs.
 
 ## Native compile
 
@@ -63,11 +65,11 @@ Supported platforms:
 * arm64
 * x86_64
 
-Example for armhf (target `arm-unknown-linux-gnueabihf`):
+Example for armhf (target: arm-unknown-linux-gnueabihf):
 ```
 git clone --depth 1 https://github.com/kingosticks/gst-plugins-rs-build.git
 cd gst-plugins-rs-build
-docker run  -v .:/gst-plugins-rs-build:z --workdir /gst-plugins-rs-build ghcr.io/mopidy/gst-plugins-rs-build:latest /bin/bash entrypoint.sh armhf audio/spotify
+docker run  -v .:/src:z --workdir /src ghcr.io/mopidy/gst-plugins-rs-build:latest /bin/bash entrypoint.sh armhf audio/spotify
 # or make build-armhf
 ```
 The resulting Debian package will be in `gst-plugins-rs/target/arm-unknown-linux-gnueabihf/debian/`
