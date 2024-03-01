@@ -6,11 +6,15 @@ packages will hopefully be provided but this is useful in the meantime.
 
 Find the latest builds at https://github.com/kingosticks/gst-plugins-rs-build/releases/latest.
 These are triggered manually, as required. We are currently focused on the 0.12 branch which
-is compatible with GStreamer versions available in Ubuntu LTS and Debian.
+is compatible with GStreamer versions available in Ubuntu LTS, Debian stable, and latest
+Raspberry Pi OS.
 
 Alternatively, compile your own native library for your host machine, or build your own Debian
-package with the provided cross-compiling container and scripts for a variety of platform.
+package with the provided cross-compiling Docker container and supporting files.
 
+# Compiling
+
+The following two methods compile the latest development version of gst-plugins-spotify.
 
 ## Native compile
 
@@ -51,14 +55,15 @@ Example build instructions for `gst-plugins-spotify`:
    ```
 
 
-## Cross-compile Debian package with Docker
+## Cross-compile (including Debian package)
 
-Support for:
+Supported platforms:
+
 * armhf (compatible with all Raspberry Pi boards)
 * arm64
 * x86_64
 
-For armhf (arm-unknown-linux-gnueabihf):
+Example for armhf (target `arm-unknown-linux-gnueabihf`):
 ```
 git clone --depth 1 https://github.com/kingosticks/gst-plugins-rs-build.git
 cd gst-plugins-rs-build
