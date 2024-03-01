@@ -1,7 +1,7 @@
 # About
 
 This repository is primarily for compiling (and currently, also hosting) Debian packages
-for [gst-plugins-rs](https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs>) plugins.
+for [gst-plugins-rs](https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs) plugins.
 Right now this is geared around the spotify plugin but could be extended to other
 plugins, either packaged individually or bundled together. At some point, upstream
 packages will hopefully be provided but this is useful in the meantime.
@@ -16,7 +16,8 @@ package with the provided cross-compiling Docker container and supporting files.
 
 # Compiling
 
-The following two methods compile the latest development version of gst-plugins-rs.
+The following two methods compile the latest development version of
+[gst-plugins-rs](https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs).
 
 ## Native compile
 
