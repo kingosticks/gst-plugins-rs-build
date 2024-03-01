@@ -1,4 +1,4 @@
-This repository is primarily for comiling (and currently, also hosting) Debian packages
+This repository is primarily for compiling (and currently, also hosting) Debian packages
 for [gst-plugins-rs](https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs>) plugins.
 Right now this is geared around the spotify plugin but could be extended to other
 plugins, either packaged individually or bundled together. At some point, upstream
