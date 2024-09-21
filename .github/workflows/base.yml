@@ -49,6 +49,7 @@ jobs:
           linker: arm-linux-gnueabihf
           linker_path: $RPI_BIN/
           extra_rust_flags: -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
+          extra_cargo_pkg: bindgen-cli
 
         - target: aarch64-unknown-linux-gnu
           linker: aarch64-linux-gnu
@@ -90,7 +91,7 @@ jobs:
           ${{ env.CONTAINER_VERSION }}-
 
     - name: Install cargo deb
-      run: cargo install cargo-deb
+      run: cargo install cargo-deb {{ matrix.extra_cargo_pkg }}
 
     - name: Configure environment
       run: |

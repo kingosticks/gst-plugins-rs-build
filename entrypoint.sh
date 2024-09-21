@@ -19,6 +19,8 @@ armhf)
     export LINKER=arm-linux-gnueabihf
     export LINKER_PATH=$RPI_BIN/
     export EXTRA_RUSTFLAGS="-L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
+    ## Required for rustls
+    export EXTRA_CARGO_PKG="bindgen-cli"
     ;;
 arm64)
     export TARGET=aarch64-unknown-linux-gnu
@@ -41,7 +43,7 @@ log "Checkout gst-plugins-rs source if required"
 log "Install Rust stuff"
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --target $TARGET
 source "$HOME/.cargo/env"
-cargo install cargo-deb
+cargo install cargo-deb $EXTRA_CARGO_PKG
 
 log "Configure environment"
 [ $(gcc -dumpmachine) != "${LINKER}" ] && export PKG_CONFIG_ALLOW_CROSS=1
@@ -58,6 +60,7 @@ log "Build GStreamer plugin $GST_SRC_DIR for $TARGET"
 ## is from our package (because the asset name had "lib" and ".so" added) and
 ## so will build the whole workspace (all packages) which is slow and requires more deps.
 pushd ${GST_SRC_DIR}
+git status && git log -n 3
 cargo build --target=$TARGET --release -v
 popd
 

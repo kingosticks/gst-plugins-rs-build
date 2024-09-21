@@ -1,13 +1,13 @@
 FROM debian:bullseye-slim
 
-LABEL org.opencontainers.image.source https://github.com/mopidy/gst-plugins-rs-build
+LABEL org.opencontainers.image.source=https://github.com/mopidy/gst-plugins-rs-build
 
 RUN dpkg --add-architecture armhf
 RUN dpkg --add-architecture arm64
 
 RUN apt-get update \
         && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        clang \
+        clang cmake \
         curl ca-certificates \
         debhelper \
         git \
