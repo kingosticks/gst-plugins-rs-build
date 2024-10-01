@@ -91,7 +91,7 @@ jobs:
           ${{ env.CONTAINER_VERSION }}-
 
     - name: Install cargo deb
-      run: cargo install cargo-deb {{ matrix.extra_cargo_pkg }}
+      run: cargo install cargo-deb ${{ matrix.extra_cargo_pkg }}
 
     - name: Configure environment
       run: |
