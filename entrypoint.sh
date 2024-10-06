@@ -39,6 +39,9 @@ esac
 log "Checkout gst-plugins-rs source if required"
 [ ! -d "gst-plugins-rs" ] && git clone --depth 1 -b $GST_GIT_BRANCH $GST_GIT_REPO
 [ ! -d "${GST_SRC_DIR}" ] && echo "Error: Can't find plugin source files at ${GST_SRC_DIR}" && exit 1
+pushd ${GST_SRC_DIR}
+git status && git remote -v
+popd
 
 log "Install Rust stuff"
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --target $TARGET
@@ -60,7 +63,6 @@ log "Build GStreamer plugin $GST_SRC_DIR for $TARGET"
 ## is from our package (because the asset name had "lib" and ".so" added) and
 ## so will build the whole workspace (all packages) which is slow and requires more deps.
 pushd ${GST_SRC_DIR}
-git status && git log -n 3
 cargo build --target=$TARGET --release -v
 popd
 

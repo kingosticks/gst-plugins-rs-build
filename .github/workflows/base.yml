@@ -73,6 +73,8 @@ jobs:
     - name: Checkout gst-plugins-rs
       run: |
         git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
+        git config --global --add safe.directory /__w/gst-plugins-rs-build/gst-plugins-rs-build
+        git status && git remote -v && git log -n 1
 
     - name: Backup original plugin Cargo.toml file
       run: |
