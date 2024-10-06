@@ -9,7 +9,7 @@ function log() {
     printf "%${WIDTH}s\n" | tr " " "*"
 }
 
-GST_GIT_REPO="${GST_GIT_REPO:-https://gitlab.freedesktop.org/kingosticks/gst-plugins-rs.git}"
+GST_GIT_REPO="${GST_GIT_REPO:-https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git}"
 GST_GIT_BRANCH="${GST_GIT_BRANCH:-main}"
 GST_SRC_DIR=gst-plugins-rs/$2
 
