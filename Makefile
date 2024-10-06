@@ -13,7 +13,7 @@ endif
 build: docker-build build-armhf build-arm64 build-x86_64
 
 build-%:
-	docker run ${GST_PLUGINS_RS_MOUNT} -v .:${WORKDIR}:z --workdir ${WORKDIR} ${REPO}/${IMAGE}:${VERSION} /bin/bash entrypoint.sh $* ${PLUGIN}
+	docker run ${GST_PLUGINS_RS_MOUNT} -v .:${WORKDIR}:z --workdir ${WORKDIR} -e GST_GIT_REPO -e GST_GIT_BRANCH ${REPO}/${IMAGE}:${VERSION} /bin/bash entrypoint.sh $* ${PLUGIN}
 	
 docker-build:
 	docker build --tag ${REPO}/${IMAGE}:${VERSION} --file Dockerfile .
