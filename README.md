@@ -21,7 +21,7 @@ The following two methods compile the latest development version of
 
 ## Native compile
 
-On a low-power device (e.g. Raspberry Pi), the compile will be slow and `cargo` may require 
+On a low-power device (e.g. Raspberry Pi), the compile will be slow and `cargo` may require
 an additional `--jobs 1` argument to prevent memory exhaustion.
 
 Example build instructions for `gst-plugins-spotify`:
@@ -37,7 +37,7 @@ Example build instructions for `gst-plugins-spotify`:
    dependencies:
 
    ```
-   sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev clang gcc pkg-config git
+   sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev clang gcc pkg-config git gstreamer1.0-tools
    ```
 
    Note that other plugins may require additional dependencies.
