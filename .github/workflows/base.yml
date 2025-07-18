@@ -56,7 +56,7 @@ jobs:
 
         - target: x86_64-unknown-linux-gnu
           linker: x86_64-linux-gnu
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     container: ghcr.io/mopidy/gst-plugins-rs-build:latest
     needs: bust-cache
     name: Build ${{ inputs.gst_plugin }} ${{ inputs.gst_version }} ${{ matrix.linker }}
