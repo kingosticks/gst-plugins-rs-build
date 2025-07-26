@@ -19,7 +19,7 @@ package with the provided cross-compiling Docker container and supporting files.
 The following two methods compile the latest development version of
 [gst-plugins-rs](https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs).
 
-## Native compile
+## Native compile - Debian
 
 On a low-power device (e.g. Raspberry Pi), the compile will be slow and `cargo` may require
 an additional `--jobs 1` argument to prevent memory exhaustion.
@@ -56,7 +56,33 @@ Example build instructions for `gst-plugins-spotify`:
    ```
    gst-inspect-1.0 spotify
    ```
+## Native compile - MacOSX
 
+1. Install rust using homebrew
+
+   ```
+   brew install rust
+   ```
+
+2. Install gstreamer using homebrew
+
+   ```
+   brew install gstreamer
+   ```
+
+3. Download, build and install `gst-plugins-spotify` from source
+
+   ```
+   git clone --depth 1 https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs
+   cd gst-plugins-rs
+   cargo cbuild -p gst-plugin-spotify --prefix=$(pkg-config --variable=pluginsdir gstreamer-1.0)/
+   cargo cinstall -p gst-plugin-spotify --prefix=$(pkg-config --variable=pluginsdir gstreamer-1.0)/
+   ```
+4. Verify the spotify plugin is available:
+
+   ```
+   gst-inspect-1.0 spotify
+   ```
 
 ## Cross-compile (including Debian package)
 
