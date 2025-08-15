@@ -4,4 +4,4 @@ maintainer = 'Nick Steel <nick@nsteel.co.uk>'
 assets = [
     ['target/release/libgstspotify.so', '%GST_PLUGINS_DIR%/', '644'],
 ]
-revision = "2"
+revision = "3"
