@@ -19,8 +19,6 @@ armhf)
     export LINKER=arm-linux-gnueabihf
     export LINKER_PATH=$RPI_BIN/
     export EXTRA_RUSTFLAGS="-L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
-    ## Required for rustls
-    export EXTRA_CARGO_PKG="bindgen-cli"
     ;;
 arm64)
     export TARGET=aarch64-unknown-linux-gnu
