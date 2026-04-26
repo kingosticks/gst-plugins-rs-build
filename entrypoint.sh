@@ -76,11 +76,20 @@ cat Cargo.toml.deb >> ${GST_SRC_DIR}/Cargo.toml
 TARGET_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
 sed -i "s@%GST_PLUGINS_DIR%@$TARGET_PLUGINS_DIR@" ${GST_SRC_DIR}/Cargo.toml
 
-log "Build Debian package"
+# Compose a .deb version that records what was actually built — branch +
+# short hash — so fork/branch builds are distinguishable from upstream at a
+# glance. Sanitize the branch to Debian's allowed upstream_version chars.
+PKG_VERSION=$(cd ${GST_SRC_DIR} && cargo pkgid | sed 's/.*[#@]//')
+GIT_HASH=$(git -C gst-plugins-rs rev-parse --short HEAD)
+BRANCH_TAG=$(echo -n "$GST_GIT_BRANCH" | tr -c 'A-Za-z0-9.+~-' '.' | sed 's/\.\.*/./g; s/^\.//; s/\.$//')
+REVISION=$(grep -E '^\s*revision\s*=' Cargo.toml.deb | sed -E 's/.*"([^"]+)".*/\1/')
+DEB_VERSION="${PKG_VERSION}+${BRANCH_TAG}.${GIT_HASH}-${REVISION}"
+
+log "Build Debian package as $DEB_VERSION"
 # Must specify target despite no-build else cargo-deb looks in the workspace for the asset, see comment at top.
 #WITH_DEBUG=" --separate-debug-symbols"
 pushd ${GST_SRC_DIR}
-cargo deb --target=$TARGET --no-build $WITH_DEBUG -v
+cargo deb --target=$TARGET --no-build --deb-version "$DEB_VERSION" $WITH_DEBUG -v
 popd
 
 DEB_FILE=$(find gst-plugins-rs/target/$TARGET/debian/*.deb)

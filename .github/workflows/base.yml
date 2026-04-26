@@ -143,8 +143,18 @@ jobs:
 
     - name: Create deb package
       run: |
+        # Compose a .deb version that records what was actually built — branch
+        # + short hash — so fork/branch builds are distinguishable from
+        # upstream at a glance. Sanitize the branch to Debian's allowed
+        # upstream_version chars.
+        PKG_VERSION=$(cd ${GST_SRC_DIR} && cargo pkgid | sed 's/.*[#@]//')
+        GIT_HASH=$(git -C gst-plugins-rs rev-parse --short HEAD)
+        BRANCH_TAG=$(echo -n "$GST_GIT_BRANCH" | tr -c 'A-Za-z0-9.+~-' '.' | sed 's/\.\.*/./g; s/^\.//; s/\.$//')
+        REVISION=$(grep -E '^\s*revision\s*=' Cargo.toml.deb | sed -E 's/.*"([^"]+)".*/\1/')
+        DEB_VERSION="${PKG_VERSION}+${BRANCH_TAG}.${GIT_HASH}-${REVISION}"
+        echo "Building deb version: $DEB_VERSION"
         pushd ${GST_SRC_DIR}
-        cargo deb -v --target=${TARGET} --no-build
+        cargo deb -v --target=${TARGET} --no-build --deb-version "$DEB_VERSION"
    
     - name: Check deb
       run: |
