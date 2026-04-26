@@ -1,0 +1,3 @@
+# Created by entrypoint.sh on every build run
+/Cargo.toml.orig
+/gst-plugins-rs/
