@@ -7,7 +7,7 @@ RUN dpkg --add-architecture arm64
 
 RUN apt-get update \
         && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        clang cmake \
+        clang \
         curl ca-certificates \
         debhelper \
         git \
