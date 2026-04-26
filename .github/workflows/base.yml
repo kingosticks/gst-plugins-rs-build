@@ -78,10 +78,6 @@ jobs:
         git config --global --add safe.directory /__w/gst-plugins-rs-build/gst-plugins-rs-build
         git status && git remote -v && git log -n 1
 
-    - name: Backup original plugin Cargo.toml file
-      run: |
-        cp ${GST_SRC_DIR}/Cargo.toml Cargo.toml.orig
-    
     - name: Cache cargo stuff
       env:
         CONTAINER_VERSION: gst-plugins-rs-build:${{ needs.bust-cache.outputs.container_version }}
@@ -96,7 +92,6 @@ jobs:
 
     - name: Install cargo deb
       run: cargo install cargo-deb@3.4.1 ${{ matrix.extra_cargo_pkg }} --locked
-      
 
     - name: Configure environment
       run: |
@@ -139,8 +134,9 @@ jobs:
    
     - name: Prepare deb package
       run: |
-        echo "Append package metadata to Cargo.toml"
-        cat Cargo.toml.orig Cargo.toml.deb > ${GST_SRC_DIR}/Cargo.toml
+        echo "Strip any leftover [package.metadata.deb] block, then append a fresh one"
+        sed -i '/^\[package\.metadata\.deb\]$/,$d' ${GST_SRC_DIR}/Cargo.toml
+        cat Cargo.toml.deb >> ${GST_SRC_DIR}/Cargo.toml
         echo "Fixup target-specific library install path"
         TARGET_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
         sed -i "s@%GST_PLUGINS_DIR%@$TARGET_PLUGINS_DIR@" ${GST_SRC_DIR}/Cargo.toml

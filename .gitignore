@@ -1,3 +1,2 @@
-# Created by entrypoint.sh on every build run
-/Cargo.toml.orig
+# Cloned by entrypoint.sh on every build run
 /gst-plugins-rs/
