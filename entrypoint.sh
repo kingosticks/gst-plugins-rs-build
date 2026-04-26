@@ -47,7 +47,7 @@ source "$HOME/.cargo/env"
 cargo install cargo-deb $EXTRA_CARGO_PKG
 
 log "Configure environment"
-[ $(gcc -dumpmachine) != "${LINKER}" ] && export PKG_CONFIG_ALLOW_CROSS=1
+[ "$(gcc -dumpmachine 2>/dev/null)" != "${LINKER}" ] && export PKG_CONFIG_ALLOW_CROSS=1
 export PKG_CONFIG_PATH=/usr/lib/${LINKER}/pkgconfig
 export LINKER_TOOLS=${LINKER_PATH}${LINKER}
 export RUSTFLAGS="-C linker=${LINKER_TOOLS}-gcc $EXTRA_RUSTFLAGS"

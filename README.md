@@ -97,7 +97,7 @@ Example for armhf (target: arm-unknown-linux-gnueabihf):
 ```
 git clone --depth 1 https://github.com/kingosticks/gst-plugins-rs-build.git
 cd gst-plugins-rs-build
-docker run  -v .:/src:z --workdir /src ghcr.io/mopidy/gst-plugins-rs-build:latest /bin/bash entrypoint.sh armhf audio/spotify
+docker run  -v .:/src:z --workdir /src ghcr.io/mopidy/gst-plugins-rs-build:latest-armhf /bin/bash entrypoint.sh armhf audio/spotify
 # or make build-armhf
 ```
 

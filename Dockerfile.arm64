@@ -1,0 +1,18 @@
+FROM debian:trixie-slim
+
+LABEL org.opencontainers.image.source=https://github.com/mopidy/gst-plugins-rs-build
+
+RUN dpkg --add-architecture arm64
+
+RUN apt-get update \
+        && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        clang \
+        curl ca-certificates \
+        debhelper \
+        git \
+        pkg-config \
+        gcc-aarch64-linux-gnu \
+        libgstreamer-plugins-base1.0-dev:arm64 \
+        && rm -rf /var/lib/apt/lists/*
+
+COPY VERSION /
