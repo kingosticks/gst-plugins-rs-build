@@ -1,3 +1,5 @@
+name: Build
+
 on:
   workflow_call:
     inputs:
@@ -47,7 +49,7 @@ jobs:
     runs-on: ubuntu-24.04
     container: ghcr.io/mopidy/gst-plugins-rs-build:latest-${{ matrix.arch }}
     needs: bust-cache
-    name: Build ${{ inputs.gst_plugin }} ${{ inputs.gst_version }} ${{ matrix.arch }}
+    name: ${{ inputs.gst_plugin }} / ${{ inputs.gst_version }} / ${{ matrix.arch }}
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
