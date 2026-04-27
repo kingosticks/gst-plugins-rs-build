@@ -11,9 +11,11 @@ function log() {
 
 GST_GIT_REPO="${GST_GIT_REPO:-https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git}"
 GST_GIT_BRANCH="${GST_GIT_BRANCH:-main}"
-GST_SRC_DIR=gst-plugins-rs/$2
+ARCH=$1
+PLUGIN=$2
+GST_SRC_DIR=gst-plugins-rs/$PLUGIN
 
-case $1 in
+case $ARCH in
 armhf)
     export TARGET=arm-unknown-linux-gnueabihf
     export LINKER=arm-linux-gnueabihf
@@ -29,10 +31,12 @@ x86_64)
     export LINKER=x86_64-linux-gnu
     ;;
 *)
-    echo "Error: Unknown architecture $1"
+    echo "Error: Unknown architecture $ARCH"
     exit 1
     ;;
 esac
+
+cd /build
 
 log "Checkout gst-plugins-rs source if required"
 [ ! -d "gst-plugins-rs" ] && git clone --depth 1 -b $GST_GIT_BRANCH $GST_GIT_REPO
@@ -72,7 +76,7 @@ log "Prepare Debian package"
 # Strip any [package.metadata.deb] block left from a prior run, then append a
 # fresh one. Keeps the source self-describing and idempotent across re-runs.
 sed -i '/^\[package\.metadata\.deb\]$/,$d' ${GST_SRC_DIR}/Cargo.toml
-cat Cargo.toml.deb >> ${GST_SRC_DIR}/Cargo.toml
+cat /package/Cargo.toml.deb >> ${GST_SRC_DIR}/Cargo.toml
 TARGET_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
 sed -i "s@%GST_PLUGINS_DIR%@$TARGET_PLUGINS_DIR@" ${GST_SRC_DIR}/Cargo.toml
 
@@ -82,7 +86,7 @@ sed -i "s@%GST_PLUGINS_DIR%@$TARGET_PLUGINS_DIR@" ${GST_SRC_DIR}/Cargo.toml
 PKG_VERSION=$(cd ${GST_SRC_DIR} && cargo pkgid | sed 's/.*[#@]//')
 GIT_HASH=$(git -C gst-plugins-rs rev-parse --short HEAD)
 BRANCH_TAG=$(echo -n "$GST_GIT_BRANCH" | tr -c 'A-Za-z0-9.+~-' '.' | sed 's/\.\.*/./g; s/^\.//; s/\.$//')
-REVISION=$(grep -E '^\s*revision\s*=' Cargo.toml.deb | sed -E 's/.*"([^"]+)".*/\1/')
+REVISION=$(grep -E '^\s*revision\s*=' /package/Cargo.toml.deb | sed -E 's/.*"([^"]+)".*/\1/')
 DEB_VERSION="${PKG_VERSION}+${BRANCH_TAG}.${GIT_HASH}-${REVISION}"
 
 log "Build Debian package as $DEB_VERSION"
@@ -96,3 +100,12 @@ DEB_FILE=$(find gst-plugins-rs/target/$TARGET/debian/*.deb)
 
 log "Sanity check package $DEB_FILE"
 dpkg-deb --field $DEB_FILE Package Architecture Version Installed-Size
+
+log "Copy outputs to /dist"
+mkdir -p /dist
+cp -v "$DEB_FILE" /dist/
+PKG_NAME=$(dpkg-deb --field "$DEB_FILE" Package)
+SO_DIR="/dist/${PKG_NAME}_${PKG_VERSION}+${BRANCH_TAG}.${GIT_HASH}_${ARCH}"
+mkdir -p "$SO_DIR"
+cp -v "$SO_FILE" "$SO_DIR/"
+ls -lR /dist

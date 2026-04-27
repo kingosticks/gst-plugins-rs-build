@@ -32,7 +32,7 @@ jobs:
     - name: Find latest container version
       id: container
       run: |
-        echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+        echo "version=$(cat images/VERSION)" >> $GITHUB_OUTPUT
 
   main:
     env:
@@ -136,7 +136,7 @@ jobs:
       run: |
         echo "Strip any leftover [package.metadata.deb] block, then append a fresh one"
         sed -i '/^\[package\.metadata\.deb\]$/,$d' ${GST_SRC_DIR}/Cargo.toml
-        cat Cargo.toml.deb >> ${GST_SRC_DIR}/Cargo.toml
+        cat package/Cargo.toml.deb >> ${GST_SRC_DIR}/Cargo.toml
         echo "Fixup target-specific library install path"
         TARGET_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
         sed -i "s@%GST_PLUGINS_DIR%@$TARGET_PLUGINS_DIR@" ${GST_SRC_DIR}/Cargo.toml
@@ -150,7 +150,7 @@ jobs:
         PKG_VERSION=$(cd ${GST_SRC_DIR} && cargo pkgid | sed 's/.*[#@]//')
         GIT_HASH=$(git -C gst-plugins-rs rev-parse --short HEAD)
         BRANCH_TAG=$(echo -n "$GST_GIT_BRANCH" | tr -c 'A-Za-z0-9.+~-' '.' | sed 's/\.\.*/./g; s/^\.//; s/\.$//')
-        REVISION=$(grep -E '^\s*revision\s*=' Cargo.toml.deb | sed -E 's/.*"([^"]+)".*/\1/')
+        REVISION=$(grep -E '^\s*revision\s*=' package/Cargo.toml.deb | sed -E 's/.*"([^"]+)".*/\1/')
         DEB_VERSION="${PKG_VERSION}+${BRANCH_TAG}.${GIT_HASH}-${REVISION}"
         echo "Building deb version: $DEB_VERSION"
         pushd ${GST_SRC_DIR}

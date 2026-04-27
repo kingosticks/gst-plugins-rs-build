@@ -97,9 +97,17 @@ Example for armhf (target: arm-unknown-linux-gnueabihf):
 ```
 git clone --depth 1 https://github.com/kingosticks/gst-plugins-rs-build.git
 cd gst-plugins-rs-build
-docker run  -v .:/src:z --workdir /src ghcr.io/mopidy/gst-plugins-rs-build:latest-armhf /bin/bash entrypoint.sh armhf audio/spotify
-# or make build-armhf
+make build-armhf
 ```
 
-The resulting Debian package will be in `gst-plugins-rs/target/arm-unknown-linux-gnueabihf/debian/`
-(and the binary will be at `gst-plugins-rs/target/arm-unknown-linux-gnueabihf/release/libgstspotify.so`).
+Outputs land in `dist/`:
+
+- `dist/*.deb` — the Debian package (filename already encodes arch and version).
+- `dist/<plugin>_<version>_<arch>/libgstspotify.so` — the raw stripped
+  library, kept in a per-build subdir so its filename stays pristine and
+  can be dropped straight into the GStreamer plugins dir without
+  renaming. The subdir name omits the Debian package revision since the
+  bare `.so` isn't a Debian package.
+
+Wipe everything with `make clean`. The full cargo working tree (cloned
+source + `target/`) lives under `build/`.
