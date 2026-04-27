@@ -43,35 +43,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-
-        - arch: armhf
-          target: arm-unknown-linux-gnueabihf
-          linker: arm-linux-gnueabihf
-          linker_path: $RPI_BIN/
-          extra_rust_flags: -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
-
-        - arch: arm64
-          target: aarch64-unknown-linux-gnu
-          linker: aarch64-linux-gnu
-
-        - arch: x86_64
-          target: x86_64-unknown-linux-gnu
-          linker: x86_64-linux-gnu
+        arch: [armhf, arm64, x86_64]
     runs-on: ubuntu-24.04
     container: ghcr.io/mopidy/gst-plugins-rs-build:latest-${{ matrix.arch }}
     needs: bust-cache
-    name: Build ${{ inputs.gst_plugin }} ${{ inputs.gst_version }} ${{ matrix.linker }}
+    name: Build ${{ inputs.gst_plugin }} ${{ inputs.gst_version }} ${{ matrix.arch }}
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
+
+    - name: Set TARGET for rustup
+      # Just TARGET — full cross-compile env is set later, after cargo install
+      # cargo-deb (a host build that would trip over cross-target settings).
+      run: |
+        package/cross-env.sh "${{ matrix.arch }}" | grep '^TARGET=' >> $GITHUB_ENV
+        echo "CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse" >> $GITHUB_ENV
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: stable
-        targets: ${{ matrix.target }}
-        
+        targets: ${{ env.TARGET }}
+
     - name: Checkout gst-plugins-rs
       run: |
         git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
@@ -85,85 +78,42 @@ jobs:
       with:
         path: |
           ~/.cargo
-          gst-plugins-rs/target/${{ matrix.target }}/release
-        key: ${{ env.CONTAINER_VERSION }}-${{ matrix.target }}
+          gst-plugins-rs/target/${{ env.TARGET }}/release
+        key: ${{ env.CONTAINER_VERSION }}-${{ env.TARGET }}
         restore-keys: |
           ${{ env.CONTAINER_VERSION }}-
 
-    - name: Install cargo deb
-      run: cargo install cargo-deb@3.4.1 ${{ matrix.extra_cargo_pkg }} --locked
+    - name: Install cargo-deb
+      # Pinned; keep in sync with package/build.sh.
+      run: cargo install cargo-deb@3.4.1 --locked
 
-    - name: Configure environment
-      run: |
-        TARGET=${{ matrix.target }}
-        LINKER=${{ matrix.linker }}
-        LINKER_PATH=$(eval "echo ${{ matrix.linker_path }}")
-        EXTRA_RUSTFLAGS=$(eval "echo ${{ matrix.extra_rust_flags }}")
-        
-        [ $(gcc -dumpmachine) != "{$LINKER}" ] && PKG_CONFIG_ALLOW_CROSS=1
-        export PKG_CONFIG_PATH=/usr/lib/${LINKER}/pkgconfig
-        export LINKER_TOOLS=${LINKER_PATH}${LINKER}
-        export RUSTFLAGS="-C linker=${LINKER_TOOLS}-gcc $EXTRA_RUSTFLAGS"
-        
-        echo "PKG_CONFIG_ALLOW_CROSS=$PKG_CONFIG_ALLOW_CROSS" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
-        echo "RUSTFLAGS=$RUSTFLAGS" >> $GITHUB_ENV
-        echo "LINKER_TOOLS=$LINKER_TOOLS" >> $GITHUB_ENV
-        echo "TARGET=$TARGET" >> $GITHUB_ENV
-        echo "CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse" >> $GITHUB_ENV
+    - name: Configure cross-compile environment
+      # Now that cargo install is done, set the rest of the cross env
+      # (LINKER, LINKER_TOOLS, PKG_CONFIG_PATH, CARGO_TARGET_<TRIPLE>_*).
+      run: package/cross-env.sh "${{ matrix.arch }}" >> $GITHUB_ENV
 
-    - name: Build gst-plugins-rs
+    - name: Capture plugin name+version
       run: |
-        pushd ${GST_SRC_DIR}
-        echo "PLUGIN_NAME_VER=$(cargo pkgid | cut -d '#' -f2)" >> $GITHUB_ENV
-        env | sort
-        cargo build --target=${TARGET} --release
+        echo "PLUGIN_NAME_VER=$(cd ${GST_SRC_DIR} && cargo pkgid | cut -d '#' -f2)" >> $GITHUB_ENV
 
-    - name: Strip binary
+    - name: Compile plugin
       run: |
-        SO_FILE=$(find gst-plugins-rs/target/${TARGET}/release/*.so)
-        ls -l $SO_FILE
-        ${LINKER_TOOLS}-strip $SO_FILE
-        ls -l $SO_FILE
-    
+        SO_FILE=$(package/compile-plugin.sh "${{ inputs.gst_plugin }}")
+        echo "SO_FILE=$SO_FILE" >> $GITHUB_ENV
+
     - name: Upload lib
       uses: actions/upload-artifact@v4
       with:
-          name: ${{ env.PLUGIN_NAME_VER }} ${{ matrix.target }} lib
-          path: gst-plugins-rs/target/${{ matrix.target }}/release/*.so
-   
-    - name: Prepare deb package
-      run: |
-        echo "Strip any leftover [package.metadata.deb] block, then append a fresh one"
-        sed -i '/^\[package\.metadata\.deb\]$/,$d' ${GST_SRC_DIR}/Cargo.toml
-        cat package/Cargo.toml.deb >> ${GST_SRC_DIR}/Cargo.toml
-        echo "Fixup target-specific library install path"
-        TARGET_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
-        sed -i "s@%GST_PLUGINS_DIR%@$TARGET_PLUGINS_DIR@" ${GST_SRC_DIR}/Cargo.toml
+          name: ${{ env.PLUGIN_NAME_VER }} ${{ env.TARGET }} lib
+          path: ${{ env.SO_FILE }}
 
-    - name: Create deb package
+    - name: Build .deb
       run: |
-        # Compose a .deb version that records what was actually built — branch
-        # + short hash — so fork/branch builds are distinguishable from
-        # upstream at a glance. Sanitize the branch to Debian's allowed
-        # upstream_version chars.
-        PKG_VERSION=$(cd ${GST_SRC_DIR} && cargo pkgid | sed 's/.*[#@]//')
-        GIT_HASH=$(git -C gst-plugins-rs rev-parse --short HEAD)
-        BRANCH_TAG=$(echo -n "$GST_GIT_BRANCH" | tr -c 'A-Za-z0-9.+~-' '.' | sed 's/\.\.*/./g; s/^\.//; s/\.$//')
-        REVISION=$(grep -E '^\s*revision\s*=' package/Cargo.toml.deb | sed -E 's/.*"([^"]+)".*/\1/')
-        DEB_VERSION="${PKG_VERSION}+${BRANCH_TAG}.${GIT_HASH}-${REVISION}"
-        echo "Building deb version: $DEB_VERSION"
-        pushd ${GST_SRC_DIR}
-        cargo deb -v --target=${TARGET} --no-build --deb-version "$DEB_VERSION"
-   
-    - name: Check deb
-      run: |
-        DEB_FILE=$(find gst-plugins-rs/target/${TARGET}/debian/*.deb)
-        dpkg-deb --field $DEB_FILE Package Architecture Version Installed-Size
+        DEB_FILE=$(package/make-deb.sh "${{ inputs.gst_plugin }}")
         echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
-   
+
     - name: Upload deb
       uses: actions/upload-artifact@v4
       with:
-          name: ${{ env.PLUGIN_NAME_VER }} ${{ matrix.target }} Debian Package
+          name: ${{ env.PLUGIN_NAME_VER }} ${{ env.TARGET }} Debian Package
           path: ${{ env.DEB_FILE }}
