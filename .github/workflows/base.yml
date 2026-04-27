@@ -45,18 +45,21 @@ jobs:
       matrix:
         include:
 
-        - target: arm-unknown-linux-gnueabihf
+        - arch: armhf
+          target: arm-unknown-linux-gnueabihf
           linker: arm-linux-gnueabihf
           linker_path: $RPI_BIN/
           extra_rust_flags: -L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib
 
-        - target: aarch64-unknown-linux-gnu
+        - arch: arm64
+          target: aarch64-unknown-linux-gnu
           linker: aarch64-linux-gnu
 
-        - target: x86_64-unknown-linux-gnu
+        - arch: x86_64
+          target: x86_64-unknown-linux-gnu
           linker: x86_64-linux-gnu
     runs-on: ubuntu-24.04
-    container: ghcr.io/mopidy/gst-plugins-rs-build:latest
+    container: ghcr.io/mopidy/gst-plugins-rs-build:latest-${{ matrix.arch }}
     needs: bust-cache
     name: Build ${{ inputs.gst_plugin }} ${{ inputs.gst_version }} ${{ matrix.linker }}
     steps:
@@ -75,10 +78,6 @@ jobs:
         git config --global --add safe.directory /__w/gst-plugins-rs-build/gst-plugins-rs-build
         git status && git remote -v && git log -n 1
 
-    - name: Backup original plugin Cargo.toml file
-      run: |
-        cp ${GST_SRC_DIR}/Cargo.toml Cargo.toml.orig
-    
     - name: Cache cargo stuff
       env:
         CONTAINER_VERSION: gst-plugins-rs-build:${{ needs.bust-cache.outputs.container_version }}
@@ -93,7 +92,6 @@ jobs:
 
     - name: Install cargo deb
       run: cargo install cargo-deb@3.4.1 ${{ matrix.extra_cargo_pkg }} --locked
-      
 
     - name: Configure environment
       run: |
@@ -136,8 +134,9 @@ jobs:
    
     - name: Prepare deb package
       run: |
-        echo "Append package metadata to Cargo.toml"
-        cat Cargo.toml.orig Cargo.toml.deb > ${GST_SRC_DIR}/Cargo.toml
+        echo "Strip any leftover [package.metadata.deb] block, then append a fresh one"
+        sed -i '/^\[package\.metadata\.deb\]$/,$d' ${GST_SRC_DIR}/Cargo.toml
+        cat Cargo.toml.deb >> ${GST_SRC_DIR}/Cargo.toml
         echo "Fixup target-specific library install path"
         TARGET_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
         sed -i "s@%GST_PLUGINS_DIR%@$TARGET_PLUGINS_DIR@" ${GST_SRC_DIR}/Cargo.toml

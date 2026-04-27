@@ -19,8 +19,6 @@ armhf)
     export LINKER=arm-linux-gnueabihf
     export LINKER_PATH=$RPI_BIN/
     export EXTRA_RUSTFLAGS="-L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
-    ## Required for rustls
-    export EXTRA_CARGO_PKG="bindgen-cli"
     ;;
 arm64)
     export TARGET=aarch64-unknown-linux-gnu
@@ -49,14 +47,11 @@ source "$HOME/.cargo/env"
 cargo install cargo-deb $EXTRA_CARGO_PKG
 
 log "Configure environment"
-[ $(gcc -dumpmachine) != "${LINKER}" ] && export PKG_CONFIG_ALLOW_CROSS=1
+[ "$(gcc -dumpmachine 2>/dev/null)" != "${LINKER}" ] && export PKG_CONFIG_ALLOW_CROSS=1
 export PKG_CONFIG_PATH=/usr/lib/${LINKER}/pkgconfig
 export LINKER_TOOLS=${LINKER_PATH}${LINKER}
 export RUSTFLAGS="-C linker=${LINKER_TOOLS}-gcc $EXTRA_RUSTFLAGS"
 env | sort
-
-log "Backup original ${GST_SRC_DIR}/Cargo.toml"
-[ ! -f "Cargo.toml.orig" ] && cp ${GST_SRC_DIR}/Cargo.toml Cargo.toml.orig
 
 log "Build GStreamer plugin $GST_SRC_DIR for $TARGET"
 ## We need to do the build ourselves as cargo-deb doesn't understand the asset target
@@ -74,7 +69,10 @@ ${LINKER_TOOLS}-strip $SO_FILE
 ls -l $SO_FILE
 
 log "Prepare Debian package"
-cat Cargo.toml.orig Cargo.toml.deb > ${GST_SRC_DIR}/Cargo.toml
+# Strip any [package.metadata.deb] block left from a prior run, then append a
+# fresh one. Keeps the source self-describing and idempotent across re-runs.
+sed -i '/^\[package\.metadata\.deb\]$/,$d' ${GST_SRC_DIR}/Cargo.toml
+cat Cargo.toml.deb >> ${GST_SRC_DIR}/Cargo.toml
 TARGET_PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0)
 sed -i "s@%GST_PLUGINS_DIR%@$TARGET_PLUGINS_DIR@" ${GST_SRC_DIR}/Cargo.toml
 

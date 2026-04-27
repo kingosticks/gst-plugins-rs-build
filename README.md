@@ -7,9 +7,7 @@ plugins, either packaged individually or bundled together. At some point, upstre
 packages will hopefully be provided but this is useful in the meantime.
 
 Find the latest builds at https://github.com/kingosticks/gst-plugins-rs-build/releases/latest.
-These are triggered manually, as required. We are currently focused on the 0.12 branch which
-is compatible with GStreamer versions available in Ubuntu LTS, Debian stable, and latest
-Raspberry Pi OS.
+These are triggered manually, as required.
 
 Alternatively, compile your own native library for your host machine, or build your own Debian
 package with the provided cross-compiling Docker container and supporting files.
@@ -56,6 +54,7 @@ Example build instructions for `gst-plugins-spotify`:
    ```
    gst-inspect-1.0 spotify
    ```
+
 ## Native compile - MacOSX
 
 1. Install rust using homebrew
@@ -78,6 +77,7 @@ Example build instructions for `gst-plugins-spotify`:
    cargo cbuild -p gst-plugin-spotify --prefix=$(pkg-config --variable=pluginsdir gstreamer-1.0)/
    cargo cinstall -p gst-plugin-spotify --prefix=$(pkg-config --variable=pluginsdir gstreamer-1.0)/
    ```
+
 4. Verify the spotify plugin is available:
 
    ```
@@ -93,11 +93,13 @@ Supported platforms:
 * x86_64
 
 Example for armhf (target: arm-unknown-linux-gnueabihf):
+
 ```
 git clone --depth 1 https://github.com/kingosticks/gst-plugins-rs-build.git
 cd gst-plugins-rs-build
-docker run  -v .:/src:z --workdir /src ghcr.io/mopidy/gst-plugins-rs-build:latest /bin/bash entrypoint.sh armhf audio/spotify
+docker run  -v .:/src:z --workdir /src ghcr.io/mopidy/gst-plugins-rs-build:latest-armhf /bin/bash entrypoint.sh armhf audio/spotify
 # or make build-armhf
 ```
+
 The resulting Debian package will be in `gst-plugins-rs/target/arm-unknown-linux-gnueabihf/debian/`
 (and the binary will be at `gst-plugins-rs/target/arm-unknown-linux-gnueabihf/release/libgstspotify.so`).

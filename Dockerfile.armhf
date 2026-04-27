@@ -1,28 +1,22 @@
-FROM debian:bullseye-slim
+FROM debian:trixie-slim
 
 LABEL org.opencontainers.image.source=https://github.com/mopidy/gst-plugins-rs-build
 
 RUN dpkg --add-architecture armhf
-RUN dpkg --add-architecture arm64
 
 RUN apt-get update \
         && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        clang cmake \
+        clang \
         curl ca-certificates \
         debhelper \
         git \
         pkg-config \
-        # amd64
-        gcc \
-        libgstreamer-plugins-base1.0-dev \
-        # RPi 0 and 1 (armv6)
         gcc-arm-linux-gnueabihf \
         libgstreamer-plugins-base1.0-dev:armhf \
-        # RPi 3, 4 and 5 (64-bit ARM)
-        gcc-aarch64-linux-gnu \
-        libgstreamer-plugins-base1.0-dev:arm64 \
         && rm -rf /var/lib/apt/lists/*
 
+# RPi 0/1 (armv6) sysroot — gcc-arm-linux-gnueabihf in Debian targets armv7,
+# so we link against this older sysroot to keep binaries armv6-compatible.
 ENV RPI_TOOLS_DIR=/rpi-tools
 RUN git clone --depth=1 https://github.com/raspberrypi/tools $RPI_TOOLS_DIR && rm -rf $RPI_TOOLS_DIR/.git
 
