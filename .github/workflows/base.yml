@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [armhf, arm64, x86_64]
+        arch: [amd64, arm64, armhf]
     runs-on: ubuntu-24.04
     container: ghcr.io/mopidy/gst-plugins-rs-build:latest-${{ matrix.arch }}
     needs: bust-cache

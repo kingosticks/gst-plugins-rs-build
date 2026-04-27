@@ -88,9 +88,9 @@ Example build instructions for `gst-plugins-spotify`:
 
 Supported platforms:
 
-* armhf (compatible with all Raspberry Pi boards)
+* amd64
 * arm64
-* x86_64
+* armhf (compatible with all Raspberry Pi boards)
 
 Example for armhf (target: arm-unknown-linux-gnueabihf):
 

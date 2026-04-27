@@ -17,11 +17,11 @@
 set -eu
 
 case "$1" in
-armhf)
-    TARGET=arm-unknown-linux-gnueabihf
-    LINKER=arm-linux-gnueabihf
-    LINKER_PATH=$RPI_BIN/
-    EXTRA_RUSTFLAGS="-L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
+amd64)
+    TARGET=x86_64-unknown-linux-gnu
+    LINKER=x86_64-linux-gnu
+    LINKER_PATH=
+    EXTRA_RUSTFLAGS=
     ;;
 arm64)
     TARGET=aarch64-unknown-linux-gnu
@@ -29,11 +29,11 @@ arm64)
     LINKER_PATH=
     EXTRA_RUSTFLAGS=
     ;;
-x86_64)
-    TARGET=x86_64-unknown-linux-gnu
-    LINKER=x86_64-linux-gnu
-    LINKER_PATH=
-    EXTRA_RUSTFLAGS=
+armhf)
+    TARGET=arm-unknown-linux-gnueabihf
+    LINKER=arm-linux-gnueabihf
+    LINKER_PATH=$RPI_BIN/
+    EXTRA_RUSTFLAGS="-L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
     ;;
 *)
     echo "cross-env.sh: unknown arch '$1'" >&2
