@@ -1,25 +1,41 @@
 REPO = ghcr.io/mopidy
 IMAGE = gst-plugins-rs-build
-VERSION = $(shell cat VERSION)
-WORKDIR = /src
-PLUGIN = audio/spotify
-ARCHES = armhf arm64 x86_64
+VERSION = $(shell cat images/VERSION)
+PLUGIN ?= audio/spotify
+ARCHES = amd64 arm64 armhf
 
 ifdef GST_PLUGINS_RS_SRC
-  GST_PLUGINS_RS_MOUNT := "-v ${GST_PLUGINS_RS_SRC}:${WORKDIR}/gst-plugins-rs:z"
+  GST_PLUGINS_RS_MOUNT := -v ${GST_PLUGINS_RS_SRC}:/build/gst-plugins-rs:z
 endif
 
-.PHONY: build docker-build release git-release docker-release
+DOCKER_RUN = docker run --rm \
+	-v ./package:/package:z,ro \
+	-v ./build:/build:z \
+	-v ./dist:/dist:z \
+	${GST_PLUGINS_RS_MOUNT} \
+	-e GST_GIT_REPO -e GST_GIT_BRANCH
 
-build: docker-build $(addprefix build-,$(ARCHES))
+.PHONY: build clean docker-image release git-release docker-release
+
+# --- Packages ---
+
+build: docker-image $(addprefix build-,$(ARCHES))
 
 build-%:
-	docker run ${GST_PLUGINS_RS_MOUNT} -v .:${WORKDIR}:z --workdir ${WORKDIR} -e GST_GIT_REPO -e GST_GIT_BRANCH ${REPO}/${IMAGE}:${VERSION}-$* /bin/bash entrypoint.sh $* ${PLUGIN}
+	mkdir -p build dist
+	${DOCKER_RUN} ${REPO}/${IMAGE}:${VERSION}-$* /bin/bash /package/build.sh $* ${PLUGIN}
 
-docker-build: $(addprefix docker-build-,$(ARCHES))
+clean:
+	docker run --rm -v .:/repo debian:trixie-slim rm -rf /repo/build /repo/dist
 
-docker-build-%:
-	docker build --tag ${REPO}/${IMAGE}:${VERSION}-$* --file Dockerfile.$* .
+# --- Images ---
+
+docker-image: $(addprefix docker-image-,$(ARCHES))
+
+docker-image-%:
+	docker build --tag ${REPO}/${IMAGE}:${VERSION}-$* --file images/Dockerfile.$* images
+
+# --- Release ---
 
 release: git-release docker-release
 

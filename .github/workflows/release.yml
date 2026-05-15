@@ -1,4 +1,4 @@
-name: Manual Release Workflow
+name: Manual release
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ on:
 
 jobs:
   build:
-    uses: ./.github/workflows/base.yml
+    uses: ./.github/workflows/build.yml
     with:
       gst_repo: ${{ github.event.inputs.gst_repo }}
       gst_version: ${{ github.event.inputs.gst_version }}

@@ -3,5 +3,5 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  do-release-workflow:
-    uses: ./.github/workflows/base.yml
+  build:
+    uses: ./.github/workflows/build.yml

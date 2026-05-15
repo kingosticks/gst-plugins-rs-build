@@ -1,2 +1,2 @@
-# Cloned by entrypoint.sh on every build run
-/gst-plugins-rs/
+/build/
+/dist/
