@@ -29,7 +29,7 @@ jobs:
       container_version: ${{ steps.container.outputs.version }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Find latest container version
         id: container
@@ -52,7 +52,7 @@ jobs:
     name: ${{ inputs.gst_plugin }} / ${{ inputs.gst_version }} / ${{ matrix.arch }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set TARGET for rustup
         # Just TARGET — full cross-compile env is set later, after cargo install
@@ -76,7 +76,7 @@ jobs:
       - name: Cache cargo stuff
         env:
           CONTAINER_VERSION: gst-plugins-rs-build:${{ needs.bust-cache.outputs.container_version }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo
@@ -112,7 +112,7 @@ jobs:
           echo "SO_FILE=$SO_FILE" >> $GITHUB_ENV
 
       - name: Upload lib
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PKG_NAME }}_${{ env.SO_VERSION }}_${{ matrix.arch }}_lib
           path: ${{ env.SO_FILE }}
@@ -123,7 +123,7 @@ jobs:
           echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
 
       - name: Upload deb
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PKG_NAME }}_${{ env.DEB_VERSION }}_${{ matrix.arch }}_deb
           path: ${{ env.DEB_FILE }}
