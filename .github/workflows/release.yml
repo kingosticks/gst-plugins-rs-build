@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       gst_repo:
-        description: 'gst-plugins-rs source repo'
+        description: "gst-plugins-rs source repo"
         required: true
-        default: 'https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git'
+        default: "https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git"
         type: string
       gst_version:
-        description: 'gst-plugins-rs branch/tag'
+        description: "gst-plugins-rs branch/tag"
         required: true
-        default: 'main'
+        default: "main"
         type: string
       gst_plugin:
-        description: 'path to plugin'
+        description: "path to plugin"
         required: true
-        default: 'audio/spotify'
+        default: "audio/spotify"
         type: string
 
 jobs:
@@ -31,26 +31,41 @@ jobs:
     name: Prepare release
     needs: build
     runs-on: ubuntu-latest
-    permissions: 
-          contents: write
+    permissions:
+      contents: write
     steps:
       - name: Download everything we built
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
-          path: stuff
-          merge-multiple: true
+          path: artifacts
+
+      - name: Stage release files
+        # Artifact names from build.yml end in _deb or _lib. The .deb files
+        # already carry their arch in the cargo-deb filename, so drop them in
+        # flat. The lib artifacts hold a plain libgstspotify.so, so we zip
+        # each subdir (which carries the arch) to keep the .so filename
+        # pristine and avoid arch collisions.
+        shell: bash
+        run: |
+          mkdir release
+          cp artifacts/*_deb/*.deb release/
+          for d in artifacts/*_lib/; do
+            name=$(basename "$d" _lib)
+            (cd "$d" && zip "$GITHUB_WORKSPACE/release/${name}.zip" -- *)
+          done
 
       - name: Find versions
+        # Pull name+version from a .zip (lib) filename rather than a .deb so
+        # the release title omits the Debian -<revision> suffix.
         run: |
-          ls -R stuff
-          echo "NAME_AND_VERSION=$(ls stuff | head -n 1 | cut -d '_' -f -2)" >> $GITHUB_ENV
+          ls -R release
+          zip=$(ls release/*.zip | head -n 1)
+          echo "NAME_AND_VERSION=$(basename "$zip" | cut -d '_' -f -2)" >> $GITHUB_ENV
 
       - name: Draft the release
-        uses: softprops/action-gh-release@975c1b265e11dd76618af1c374e7981f9a6ff44a
+        uses: softprops/action-gh-release@v3
         with:
-          files: stuff/*
+          files: release/*
           draft: true
-          name: '${{ env.NAME_AND_VERSION }}'
-          body: '${{ github.event.inputs.gst_repo }} ${{ github.event.inputs.gst_plugin }} v${{ github.event.inputs.gst_version }}'
-          
-        
+          name: "${{ env.NAME_AND_VERSION }}"
+          body: "${{ github.event.inputs.gst_repo }} ${{ github.event.inputs.gst_plugin }} v${{ github.event.inputs.gst_version }}"

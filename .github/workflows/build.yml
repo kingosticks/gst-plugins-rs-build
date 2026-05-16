@@ -4,16 +4,16 @@ on:
   workflow_call:
     inputs:
       gst_repo:
-        description: 'gst-plugins-rs source repo'
-        default: 'https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git'
+        description: "gst-plugins-rs source repo"
+        default: "https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git"
         type: string
       gst_version:
-        description: 'gst-plugins-rs branch/tag'
-        default: 'main'
+        description: "gst-plugins-rs branch/tag"
+        default: "main"
         type: string
       gst_plugin:
-        description: 'path to plugin'
-        default: 'audio/spotify'
+        description: "path to plugin"
+        default: "audio/spotify"
         type: string
 
 defaults:
@@ -28,13 +28,13 @@ jobs:
     outputs:
       container_version: ${{ steps.container.outputs.version }}
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v6
 
-    - name: Find latest container version
-      id: container
-      run: |
-        echo "version=$(cat images/VERSION)" >> $GITHUB_OUTPUT
+      - name: Find latest container version
+        id: container
+        run: |
+          echo "version=$(cat images/VERSION)" >> $GITHUB_OUTPUT
 
   main:
     env:
@@ -51,71 +51,79 @@ jobs:
     needs: bust-cache
     name: ${{ inputs.gst_plugin }} / ${{ inputs.gst_version }} / ${{ matrix.arch }}
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v6
 
-    - name: Set TARGET for rustup
-      # Just TARGET — full cross-compile env is set later, after cargo install
-      # cargo-deb (a host build that would trip over cross-target settings).
-      run: |
-        package/cross-env.sh "${{ matrix.arch }}" | grep '^TARGET=' >> $GITHUB_ENV
-        echo "CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse" >> $GITHUB_ENV
+      - name: Set TARGET for rustup
+        # Just TARGET — full cross-compile env is set later, after cargo install
+        # cargo-deb (a host build that would trip over cross-target settings).
+        run: |
+          package/cross-env.sh "${{ matrix.arch }}" | grep '^TARGET=' >> $GITHUB_ENV
+          echo "CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse" >> $GITHUB_ENV
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: stable
-        targets: ${{ env.TARGET }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: ${{ env.TARGET }}
 
-    - name: Checkout gst-plugins-rs
-      run: |
-        git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
-        git config --global --add safe.directory /__w/gst-plugins-rs-build/gst-plugins-rs-build
-        git status && git remote -v && git log -n 1
+      - name: Checkout gst-plugins-rs
+        run: |
+          git clone --depth 1 -b ${{ env.GST_GIT_BRANCH }} ${{ env.GST_GIT_REPO }}
+          git config --global --add safe.directory /__w/gst-plugins-rs-build/gst-plugins-rs-build
+          git status && git remote -v && git log -n 1
 
-    - name: Cache cargo stuff
-      env:
-        CONTAINER_VERSION: gst-plugins-rs-build:${{ needs.bust-cache.outputs.container_version }}
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo
-          gst-plugins-rs/target/${{ env.TARGET }}/release
-        key: ${{ env.CONTAINER_VERSION }}-${{ env.TARGET }}
-        restore-keys: |
-          ${{ env.CONTAINER_VERSION }}-
+      - name: Cache cargo stuff
+        env:
+          CONTAINER_VERSION: gst-plugins-rs-build:${{ needs.bust-cache.outputs.container_version }}
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo
+            gst-plugins-rs/target/${{ env.TARGET }}/release
+          key: ${{ env.CONTAINER_VERSION }}-${{ env.TARGET }}
+          restore-keys: |
+            ${{ env.CONTAINER_VERSION }}-
 
-    - name: Install cargo-deb
-      # Pinned; keep in sync with package/build.sh.
-      run: cargo install cargo-deb@3.4.1 --locked
+      - name: Install cargo-deb
+        # Pinned; keep in sync with package/build.sh.
+        run: cargo install cargo-deb@3.4.1 --locked
 
-    - name: Configure cross-compile environment
-      # Now that cargo install is done, set the rest of the cross env
-      # (LINKER, LINKER_TOOLS, PKG_CONFIG_PATH, CARGO_TARGET_<TRIPLE>_*).
-      run: package/cross-env.sh "${{ matrix.arch }}" >> $GITHUB_ENV
+      - name: Configure cross-compile environment
+        # Now that cargo install is done, set the rest of the cross env
+        # (LINKER, LINKER_TOOLS, PKG_CONFIG_PATH, CARGO_TARGET_<TRIPLE>_*).
+        run: package/cross-env.sh "${{ matrix.arch }}" >> $GITHUB_ENV
 
-    - name: Capture plugin name+version
-      run: |
-        echo "PLUGIN_NAME_VER=$(cd ${GST_SRC_DIR} && cargo pkgid | cut -d '#' -f2)" >> $GITHUB_ENV
+      - name: Capture plugin name and versions
+        # Naming mirrors local dist/ output:
+        #   <pkg>_<so-version>_<arch>            (subdir holding the bare .so)
+        #   <pkg>_<deb-version>_<arch>.deb       (flat .deb filename)
+        # so the artifact names line up with what cargo-deb produces and what
+        # package/build.sh writes locally.
+        run: |
+          PKG_NAME=$(cd ${GST_SRC_DIR} && cargo pkgid | sed -e 's/.*#//' -e 's/@.*//')
+          echo "PKG_NAME=$PKG_NAME" >> $GITHUB_ENV
+          echo "SO_VERSION=$(package/compose-version.sh "${GST_SRC_DIR}")" >> $GITHUB_ENV
+          echo "DEB_VERSION=$(package/compose-version.sh --deb "${GST_SRC_DIR}")" >> $GITHUB_ENV
 
-    - name: Compile plugin
-      run: |
-        SO_FILE=$(package/compile-plugin.sh "${{ inputs.gst_plugin }}")
-        echo "SO_FILE=$SO_FILE" >> $GITHUB_ENV
+      - name: Compile plugin
+        run: |
+          SO_FILE=$(package/compile-plugin.sh "${{ inputs.gst_plugin }}")
+          echo "SO_FILE=$SO_FILE" >> $GITHUB_ENV
 
-    - name: Upload lib
-      uses: actions/upload-artifact@v4
-      with:
-          name: ${{ env.PLUGIN_NAME_VER }} ${{ env.TARGET }} lib
+      - name: Upload lib
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.PKG_NAME }}_${{ env.SO_VERSION }}_${{ matrix.arch }}_lib
           path: ${{ env.SO_FILE }}
 
-    - name: Build .deb
-      run: |
-        DEB_FILE=$(package/make-deb.sh "${{ inputs.gst_plugin }}")
-        echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
+      - name: Build .deb
+        run: |
+          DEB_FILE=$(package/make-deb.sh "${{ inputs.gst_plugin }}")
+          echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
 
-    - name: Upload deb
-      uses: actions/upload-artifact@v4
-      with:
-          name: ${{ env.PLUGIN_NAME_VER }} ${{ env.TARGET }} Debian Package
+      - name: Upload deb
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.PKG_NAME }}_${{ env.DEB_VERSION }}_${{ matrix.arch }}_deb
           path: ${{ env.DEB_FILE }}
