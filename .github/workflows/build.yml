@@ -94,9 +94,17 @@ jobs:
         # (LINKER, LINKER_TOOLS, PKG_CONFIG_PATH, CARGO_TARGET_<TRIPLE>_*).
         run: package/cross-env.sh "${{ matrix.arch }}" >> $GITHUB_ENV
 
-      - name: Capture plugin name+version
+      - name: Capture plugin name and versions
+        # Naming mirrors local dist/ output:
+        #   <pkg>_<so-version>_<arch>            (subdir holding the bare .so)
+        #   <pkg>_<deb-version>_<arch>.deb       (flat .deb filename)
+        # so the artifact names line up with what cargo-deb produces and what
+        # package/build.sh writes locally.
         run: |
-          echo "PLUGIN_NAME_VER=$(cd ${GST_SRC_DIR} && cargo pkgid | cut -d '#' -f2)" >> $GITHUB_ENV
+          PKG_NAME=$(cd ${GST_SRC_DIR} && cargo pkgid | sed -e 's/.*#//' -e 's/@.*//')
+          echo "PKG_NAME=$PKG_NAME" >> $GITHUB_ENV
+          echo "SO_VERSION=$(package/compose-version.sh "${GST_SRC_DIR}")" >> $GITHUB_ENV
+          echo "DEB_VERSION=$(package/compose-version.sh --deb "${GST_SRC_DIR}")" >> $GITHUB_ENV
 
       - name: Compile plugin
         run: |
@@ -106,7 +114,7 @@ jobs:
       - name: Upload lib
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PLUGIN_NAME_VER }} ${{ env.TARGET }} lib
+          name: ${{ env.PKG_NAME }}_${{ env.SO_VERSION }}_${{ matrix.arch }}_lib
           path: ${{ env.SO_FILE }}
 
       - name: Build .deb
@@ -117,5 +125,5 @@ jobs:
       - name: Upload deb
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PLUGIN_NAME_VER }} ${{ env.TARGET }} Debian Package
+          name: ${{ env.PKG_NAME }}_${{ env.DEB_VERSION }}_${{ matrix.arch }}_deb
           path: ${{ env.DEB_FILE }}
