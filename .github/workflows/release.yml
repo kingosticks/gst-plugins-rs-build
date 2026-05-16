@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       gst_repo:
-        description: 'gst-plugins-rs source repo'
+        description: "gst-plugins-rs source repo"
         required: true
-        default: 'https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git'
+        default: "https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git"
         type: string
       gst_version:
-        description: 'gst-plugins-rs branch/tag'
+        description: "gst-plugins-rs branch/tag"
         required: true
-        default: 'main'
+        default: "main"
         type: string
       gst_plugin:
-        description: 'path to plugin'
+        description: "path to plugin"
         required: true
-        default: 'audio/spotify'
+        default: "audio/spotify"
         type: string
 
 jobs:
@@ -31,8 +31,8 @@ jobs:
     name: Prepare release
     needs: build
     runs-on: ubuntu-latest
-    permissions: 
-          contents: write
+    permissions:
+      contents: write
     steps:
       - name: Download everything we built
         uses: actions/download-artifact@v4
@@ -50,7 +50,5 @@ jobs:
         with:
           files: stuff/*
           draft: true
-          name: '${{ env.NAME_AND_VERSION }}'
-          body: '${{ github.event.inputs.gst_repo }} ${{ github.event.inputs.gst_plugin }} v${{ github.event.inputs.gst_version }}'
-          
-        
+          name: "${{ env.NAME_AND_VERSION }}"
+          body: "${{ github.event.inputs.gst_repo }} ${{ github.event.inputs.gst_plugin }} v${{ github.event.inputs.gst_version }}"
