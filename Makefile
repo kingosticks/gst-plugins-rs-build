@@ -2,7 +2,7 @@ REPO = ghcr.io/mopidy
 IMAGE = gst-plugins-rs-build
 VERSION = $(shell cat images/VERSION)
 PLUGIN ?= audio/spotify
-ARCHES = amd64 arm64 armhf
+ARCHES = amd64 arm64 armhf riscv64
 
 ifdef GST_PLUGINS_RS_SRC
   GST_PLUGINS_RS_MOUNT := -v ${GST_PLUGINS_RS_SRC}:/build/gst-plugins-rs:z

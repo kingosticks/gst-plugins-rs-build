@@ -123,7 +123,7 @@ machine:
 ```
 git clone --depth 1 https://github.com/kingosticks/gst-plugins-rs-build.git
 cd gst-plugins-rs-build
-make build-amd64  # or build-arm64 or build-armhf
+make build-amd64  # or build-arm64, build-armhf, or build-riscv64
 ```
 
 Cross-compiling for the following platforms are supported:
@@ -131,6 +131,7 @@ Cross-compiling for the following platforms are supported:
 * amd64 - Run `make build-amd64`
 * arm64 - Run `make build-arm64`
 * armhf - Run `make build-armhf` (compatible with all Raspberry Pi boards)
+* riscv64 - Run `make build-riscv64`
 
 To build for all platforms, run `make` without any arguments.
 

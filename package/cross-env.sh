@@ -35,6 +35,12 @@ armhf)
     LINKER_PATH=$RPI_BIN/
     EXTRA_RUSTFLAGS="-L$RPI_SYSROOT/lib -L$RPI_SYSROOT/usr/lib"
     ;;
+riscv64)
+    TARGET=riscv64gc-unknown-linux-gnu
+    LINKER=riscv64-linux-gnu
+    LINKER_PATH=
+    EXTRA_RUSTFLAGS=
+    ;;
 *)
     echo "cross-env.sh: unknown arch '$1'" >&2
     exit 1
